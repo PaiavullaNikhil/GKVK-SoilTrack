@@ -1,170 +1,318 @@
-"""Service for analyzing soil health card data."""
+"""Analysis service for PaddleOCR output."""
 
 import re
-from typing import List, Optional
+from typing import List, Tuple, Dict
 from models import SoilData, NutrientStatus
 
 
 class AnalysisService:
-    """Service for soil data analysis."""
+    """Parse PaddleOCR's structured output."""
 
-    # Nutrient thresholds based on Indian soil standards
-    THRESHOLDS = {
-        "ph": {"low": (0, 6.0), "medium": (6.0, 7.5), "high": (7.5, 14)},
-        "nitrogen": {"low": (0, 280), "medium": (280, 560), "high": (560, 9999)},
-        "phosphorus": {"low": (0, 10), "medium": (10, 25), "high": (25, 9999)},
-        "potassium": {"low": (0, 120), "medium": (120, 280), "high": (280, 9999)},
-        "organic_carbon": {"low": (0, 0.5), "medium": (0.5, 0.75), "high": (0.75, 9999)},
-        "ec": {"low": (0, 1.0), "medium": (1.0, 2.0), "high": (2.0, 9999)},
+    PARAM_ORDER = [
+        "ph", "ec", "organic_carbon", "nitrogen", "phosphorus", "potassium",
+        "sulphur", "zinc", "boron", "iron", "manganese", "copper"
+    ]
+
+    # Patterns to match parameter names (English and Kannada)
+    PARAM_PATTERNS = {
+        "ph": [r"pH", r"\(pH\)", r"ಪಿ\.?ಹೆಚ್", r"ರಸಸಾರ"],
+        "ec": [r"EC", r"E\.?C", r"\(EC\)", r"\(E\.?C\)", r"ಇ\.?ಸಿ", r"ವಿದ್ಯುತ್", r"ವಾಹಕತೆ"],
+        "organic_carbon": [r"OC", r"\(OC\)", r"\(?C\)", r"ಸಾವಯವ", r"ಇಂಗಾಲ", r"Organic"],
+        "nitrogen": [r"\bN\b", r"\(N\)", r"TN", r"ಸಾರಜನಕ", r"Nitrogen"],
+        "phosphorus": [r"P2O5", r"P205", r"P2o5", r"\(P2", r"ರಂಜಕ", r"Phosphorus"],
+        "potassium": [r"K2O", r"K20", r"\(K2", r"ಪೊಟ್ಯಾಶ್", r"ಪೊಟ್ಯಾಷ್", r"Potassium"],
+        "sulphur": [r"\bS\b", r"\(S\)", r"ಗಂಧಕ", r"Sulphur"],
+        "zinc": [r"Zn", r"ZR", r"\(Zn\)", r"\(ZR\)", r"ಸತು", r"Zinc"],
+        "boron": [r"\bB\b", r"\(B\)", r"ಬೋರಾನ್", r"Boron"],
+        "iron": [r"Fe", r"\(Fe\)", r"ಕಬ್ಬಿಣ", r"Iron"],
+        "manganese": [r"Mn", r"\(Mn\)", r"ಮ್ಯಾಂಗನೀಸ್", r"Manganese"],
+        "copper": [r"Cu", r"\(Cu\)", r"ತಾಮ್ರ", r"Copper"],
     }
 
-    # Status colors
-    STATUS_COLORS = {
-        "low": "#EF4444",  # Red
-        "medium": "#F59E0B",  # Amber
-        "high": "#10B981",  # Green
-    }
-
-    # Kannada translations
-    STATUS_KN = {
-        "low": "ಕಡಿಮೆ",
-        "medium": "ಮಧ್ಯಮ",
-        "high": "ಹೆಚ್ಚು",
+    # Status keywords in Kannada and their colors
+    STATUS_MAP = {
+        "ಅಧಿಕ ಆಮ್ಲೀಯ": ("#F97316", "Highly Acidic"),
+        "ಆಮ್ಲೀಯ": ("#F97316", "Acidic"),
+        "ಲವಣ ರಹಿತ": ("#10B981", "Salt Free"),
+        "ಸಾಕಷ್ಟು": ("#10B981", "Sufficient"),
+        "ಮಧ್ಯಮ": ("#F59E0B", "Medium"),
+        "ಕಡಿಮೆ": ("#EF4444", "Low"),
+        "ಹೆಚ್ಚು": ("#10B981", "High"),
+        "ಸಾಮಾನ್ಯ": ("#10B981", "Normal"),
+        "ತಟಸ್ಥ": ("#10B981", "Neutral"),
+        "ಕ್ಷಾರೀಯ": ("#F59E0B", "Alkaline"),
     }
 
     NUTRIENT_KN = {
-        "ph": "ಪಿ.ಎಚ್",
-        "nitrogen": "ಸಾರಜನಕ (N)",
-        "phosphorus": "ರಂಜಕ (P)",
-        "potassium": "ಪೊಟ್ಯಾಸಿಯಂ (K)",
-        "organic_carbon": "ಸಾವಯವ ಇಂಗಾಲ",
-        "ec": "ವಿದ್ಯುತ್ ವಾಹಕತೆ",
+        "ph": "ರಸಸಾರ (pH)",
+        "ec": "ವಿದ್ಯುತ್ ವಾಹಕತೆ (EC)",
+        "organic_carbon": "ಸಾವಯವ ಇಂಗಾಲ (OC)",
+        "nitrogen": "ಲಭ್ಯ ಸಾರಜನಕ (N)",
+        "phosphorus": "ಲಭ್ಯ ರಂಜಕ (P2O5)",
+        "potassium": "ಲಭ್ಯ ಪೊಟ್ಯಾಶ್ (K2O)",
+        "sulphur": "ಲಭ್ಯ ಗಂಧಕ (S)",
+        "zinc": "ಲಭ್ಯ ಸತು (Zn)",
+        "boron": "ಲಭ್ಯ ಬೋರಾನ್ (B)",
+        "iron": "ಲಭ್ಯ ಕಬ್ಬಿಣ (Fe)",
+        "manganese": "ಲಭ್ಯ ಮ್ಯಾಂಗನೀಸ್ (Mn)",
+        "copper": "ಲಭ್ಯ ತಾಮ್ರ (Cu)",
     }
 
-    def _safe_float(self, value: Optional[str]) -> Optional[float]:
-        """Safely convert string to float."""
-        if value is None:
-            return None
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return None
+    UNITS = {
+        "ph": "", "ec": "dS/m", "organic_carbon": "%",
+        "nitrogen": "kg/ha", "phosphorus": "kg/ha", "potassium": "kg/ha",
+        "sulphur": "ppm", "zinc": "ppm", "boron": "ppm",
+        "iron": "ppm", "manganese": "ppm", "copper": "ppm",
+    }
 
-    def _extract_number(self, text: str, patterns: List[str]) -> Optional[float]:
-        """Extract a number following any of the given patterns."""
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                # Try to get the captured group
-                try:
-                    value = match.group(1)
-                    if value:
-                        return self._safe_float(value)
-                except (IndexError, AttributeError):
-                    pass
+    def _parse_value(self, raw: str) -> float:
+        """Parse value to float."""
+        if not raw:
+            return 0.0
+        raw = raw.strip()
+        if raw.startswith('>'):
+            try: return float(raw[1:])
+            except: return 0.0
+        if raw.startswith('<'):
+            try: return float(raw[1:])
+            except: return 0.0
+        m = re.match(r'(\d+\.?\d*)\s*[-]\s*(\d+\.?\d*)', raw)
+        if m:
+            return (float(m.group(1)) + float(m.group(2))) / 2
+        try: return float(raw)
+        except: return 0.0
+
+    def _find_param(self, text: str) -> str:
+        """Find which parameter this text refers to."""
+        for param, patterns in self.PARAM_PATTERNS.items():
+            for pattern in patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    return param
         return None
 
-    def analyze_soil_card(self, ocr_text: str) -> SoilData:
-        """
-        Extract soil parameters from OCR text.
+    def _find_status(self, text: str) -> Tuple[str, str, str]:
+        """Find status keyword in text and return (status_kn, color, status_en)."""
+        for status_kn, (color, status_en) in self.STATUS_MAP.items():
+            if status_kn in text:
+                return (status_kn, color, status_en)
+        return ("ಪತ್ತೆಯಾಗಿಲ್ಲ", "#6B7280", "Not Found")
 
-        Args:
-            ocr_text: Raw text from OCR
+    def _extract_value(self, text: str) -> str:
+        """Extract numeric value from text."""
+        # Look for patterns like: 5.0-5.5, >0.6, <2, 140-280, etc.
+        patterns = [
+            r'(\d+\.?\d*\s*[-–]\s*\d+\.?\d*)',  # Range: 5.0-5.5
+            r'([><]\s*\d+\.?\d*)',              # Comparison: >0.6, <2
+            r'(\d+\.?\d+)',                      # Decimal: 0.75
+            r'(\d+)',                            # Integer: 140
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, text)
+            if m:
+                return m.group(1).replace(' ', '')
+        return None
 
-        Returns:
-            SoilData object with extracted values
-        """
-        soil_data = SoilData()
-        text = ocr_text.lower()
+    # Colors: RED=#EF4444, YELLOW=#F59E0B, GREEN=#10B981
+    RED = "#EF4444"
+    YELLOW = "#F59E0B"
+    GREEN = "#10B981"
+    GRAY = "#6B7280"
 
-        # Extract pH - look for "ph" followed by a number
-        soil_data.ph = self._extract_number(text, [
-            r"ph\s*[:\-]?\s*(\d+\.?\d*)",
-            r"(\d+\.?\d*)\s*ph",
-        ])
-
-        # Extract Nitrogen (N) - kg/ha
-        soil_data.nitrogen = self._extract_number(text, [
-            r"nitrogen\s*[:\-]?\s*(\d+\.?\d*)",
-            r"available\s*n\s*[:\-]?\s*(\d+\.?\d*)",
-            r"\bn\s*[:\-]\s*(\d+\.?\d*)",
-        ])
-
-        # Extract Phosphorus (P) - kg/ha
-        soil_data.phosphorus = self._extract_number(text, [
-            r"phosphorus\s*[:\-]?\s*(\d+\.?\d*)",
-            r"available\s*p\s*[:\-]?\s*(\d+\.?\d*)",
-            r"\bp\s*[:\-]\s*(\d+\.?\d*)",
-        ])
-
-        # Extract Potassium (K) - kg/ha
-        soil_data.potassium = self._extract_number(text, [
-            r"potassium\s*[:\-]?\s*(\d+\.?\d*)",
-            r"available\s*k\s*[:\-]?\s*(\d+\.?\d*)",
-            r"\bk\s*[:\-]\s*(\d+\.?\d*)",
-        ])
-
-        # Extract Organic Carbon
-        soil_data.organic_carbon = self._extract_number(text, [
-            r"organic\s*carbon\s*[:\-]?\s*(\d+\.?\d*)",
-            r"oc\s*[:\-]\s*(\d+\.?\d*)",
-        ])
-
-        # Extract EC (Electrical Conductivity)
-        soil_data.ec = self._extract_number(text, [
-            r"electrical\s*conductivity\s*[:\-]?\s*(\d+\.?\d*)",
-            r"ec\s*[:\-]\s*(\d+\.?\d*)",
-            r"ec\s*<\s*(\d+\.?\d*)",
-        ])
-
-        return soil_data
-
-    def get_nutrient_status(self, soil_data: SoilData) -> List[NutrientStatus]:
-        """
-        Determine status of each nutrient.
-
-        Args:
-            soil_data: Extracted soil data
-
-        Returns:
-            List of NutrientStatus objects
-        """
-        statuses = []
-
-        nutrients = {
-            "ph": (soil_data.ph, ""),
-            "nitrogen": (soil_data.nitrogen, "kg/ha"),
-            "phosphorus": (soil_data.phosphorus, "kg/ha"),
-            "potassium": (soil_data.potassium, "kg/ha"),
-            "organic_carbon": (soil_data.organic_carbon, "%"),
-            "ec": (soil_data.ec, "dS/m"),
-        }
-
-        for nutrient, (value, unit) in nutrients.items():
-            status = self._determine_status(nutrient, value)
-            statuses.append(
-                NutrientStatus(
-                    nutrient=nutrient.replace("_", " ").title(),
-                    nutrient_kn=self.NUTRIENT_KN.get(nutrient, nutrient),
-                    value=value,
-                    unit=unit,
-                    status=status,
-                    status_kn=self.STATUS_KN.get(status, status),
-                    color=self.STATUS_COLORS.get(status, "#6B7280"),
-                )
-            )
-
-        return statuses
-
-    def _determine_status(self, nutrient: str, value: Optional[float]) -> str:
-        """Determine status based on threshold."""
+    def _get_status_from_value(self, param: str, value: float) -> Tuple[str, str, str]:
+        """Determine status from value using GKVK/UAS thresholds."""
         if value is None:
-            return "medium"  # Default if no value
+            return ("ಪತ್ತೆಯಾಗಿಲ್ಲ", self.GRAY, "Not Found")
+        
+        # pH - special handling with multiple ranges
+        if param == "ph":
+            if value < 5.5:
+                return ("ಆಮ್ಲೀಯ", self.RED, "Acidic")
+            elif value <= 6.5:
+                return ("ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", self.YELLOW, "Slightly Acidic")
+            elif value <= 7.5:
+                return ("ತಟಸ್ಥ", self.GREEN, "Neutral")
+            elif value <= 8.5:
+                return ("ಸ್ವಲ್ಪ ಕ್ಷಾರೀಯ", self.YELLOW, "Slightly Alkaline")
+            else:
+                return ("ಕ್ಷಾರೀಯ", self.RED, "Alkaline")
+        
+        # EC - Electrical Conductivity
+        if param == "ec":
+            if value < 1.0:
+                return ("ಸಾಮಾನ್ಯ", self.GREEN, "Normal")
+            elif value <= 2.0:
+                return ("ಸ್ವಲ್ಪ ಲವಣ", self.YELLOW, "Slightly Saline")
+            else:
+                return ("ಲವಣಯುಕ್ತ", self.RED, "Saline")
+        
+        # Organic Carbon
+        if param == "organic_carbon":
+            if value < 0.50:
+                return ("ಕಡಿಮೆ", self.RED, "Low")
+            elif value <= 0.75:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಹೆಚ್ಚು", self.GREEN, "High")
+        
+        # Nitrogen
+        if param == "nitrogen":
+            if value < 140:
+                return ("ಕಡಿಮೆ", self.RED, "Low")
+            elif value <= 280:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಹೆಚ್ಚು", self.GREEN, "High")
+        
+        # Phosphorus
+        if param == "phosphorus":
+            if value < 23:
+                return ("ಕಡಿಮೆ", self.RED, "Low")
+            elif value <= 57:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಹೆಚ್ಚು", self.GREEN, "High")
+        
+        # Potassium
+        if param == "potassium":
+            if value < 145:
+                return ("ಕಡಿಮೆ", self.RED, "Low")
+            elif value <= 337:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಹೆಚ್ಚು", self.GREEN, "High")
+        
+        # Sulphur
+        if param == "sulphur":
+            if value < 10:
+                return ("ಕಡಿಮೆ", self.RED, "Low")
+            elif value <= 20:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಹೆಚ್ಚು", self.GREEN, "High")
+        
+        # Zinc - critical limit based
+        if param == "zinc":
+            if value < 0.6:
+                return ("ಕೊರತೆ", self.RED, "Deficient")
+            else:
+                return ("ಸಾಕಷ್ಟು", self.GREEN, "Sufficient")
+        
+        # Boron
+        if param == "boron":
+            if value < 0.5:
+                return ("ಕೊರತೆ", self.RED, "Deficient")
+            elif value <= 1.0:
+                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
+            else:
+                return ("ಸಾಕಷ್ಟು", self.GREEN, "Sufficient")
+        
+        # Iron - critical limit based
+        if param == "iron":
+            if value < 4.5:
+                return ("ಕೊರತೆ", self.RED, "Deficient")
+            else:
+                return ("ಸಾಕಷ್ಟು", self.GREEN, "Sufficient")
+        
+        # Manganese - critical limit based
+        if param == "manganese":
+            if value < 1.0:
+                return ("ಕೊರತೆ", self.RED, "Deficient")
+            else:
+                return ("ಸಾಕಷ್ಟು", self.GREEN, "Sufficient")
+        
+        # Copper - critical limit based
+        if param == "copper":
+            if value < 0.2:
+                return ("ಕೊರತೆ", self.RED, "Deficient")
+            else:
+                return ("ಸಾಕಷ್ಟು", self.GREEN, "Sufficient")
+        
+        return ("ಪತ್ತೆಯಾಗಿಲ್ಲ", self.GRAY, "Not Found")
 
-        thresholds = self.THRESHOLDS.get(nutrient, {})
+    def analyze_soil_card(self, ocr_text: str) -> Tuple[SoilData, Dict, Dict]:
+        """Parse OCR output to extract soil data."""
+        soil_data = SoilData()
+        raw_values = {}
+        status_info = {}
+        
+        print(f"\n{'='*60}", flush=True)
+        print("ANALYZING OCR OUTPUT", flush=True)
+        print(f"{'='*60}", flush=True)
+        
+        # Split into rows
+        rows = ocr_text.strip().split('\n')
+        
+        found = {}
+        
+        for row in rows:
+            # Find which parameter this row is about
+            param = self._find_param(row)
+            if not param:
+                continue
+            
+            if param in found:
+                continue
+            
+            # Extract value
+            value = self._extract_value(row)
+            
+            # Try to extract Kannada status
+            status_kn, color, status_en = self._find_status(row)
+            
+            # If status not found in OCR, calculate from value
+            if status_kn == "ಪತ್ತೆಯಾಗಿಲ್ಲ" and value:
+                parsed_val = self._parse_value(value)
+                status_kn, color, _ = self._get_status_from_value(param, parsed_val)
+            
+            found[param] = {
+                'value': value,
+                'status_kn': status_kn,
+                'color': color,
+                'status_en': status_en,
+                'row': row
+            }
+            
+            print(f"  Found {param}: value={value}", flush=True)
+        
+        # Build output for all 12 parameters
+        print(f"\nRESULTS ({len(found)}/12 found):", flush=True)
+        for i, param in enumerate(self.PARAM_ORDER):
+            if param in found:
+                d = found[param]
+                raw = d['value'] or ''
+                status_kn = d['status_kn']
+                color = d['color']
+                
+                setattr(soil_data, param, round(self._parse_value(raw), 2) if raw else None)
+                raw_values[param] = raw
+                status_info[param] = ("ocr", color, status_kn)
+                
+                print(f"  {i+1:02d}. {param:15s}: {raw:12s} | [status]", flush=True)
+            else:
+                status_info[param] = ("missing", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ")
+                print(f"  {i+1:02d}. {param:15s}: NOT FOUND", flush=True)
+        
+        print(f"{'='*60}\n", flush=True)
+        return soil_data, raw_values, status_info
 
-        for status, (min_val, max_val) in thresholds.items():
-            if min_val <= value < max_val:
-                return status
-
-        return "medium"
+    def get_nutrient_status(self, soil_data, raw_values=None, status_info=None):
+        if not raw_values: raw_values = {}
+        if not status_info: status_info = {}
+        
+        result = []
+        for param in self.PARAM_ORDER:
+            value = getattr(soil_data, param, None)
+            raw = raw_values.get(param)
+            _, color, status_kn = status_info.get(param, ("", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ"))
+            
+            result.append(NutrientStatus(
+                nutrient=param.replace("_", " ").title(),
+                nutrient_kn=self.NUTRIENT_KN.get(param, param),
+                value=value,
+                value_raw=raw,
+                unit=self.UNITS.get(param, ""),
+                status="ocr",
+                status_kn=status_kn,
+                color=color,
+            ))
+        return result

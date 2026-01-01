@@ -102,14 +102,16 @@ async def analyze_image(request: AnalysisRequest):
         
         # Perform OCR
         ocr_result = ocr_service.extract_text(str(image_path))
-        print(f"OCR result: {ocr_result[:100]}...")
+        print(f"OCR result: {len(ocr_result)} chars extracted")
 
-        # Analyze soil data
-        soil_data = analysis_service.analyze_soil_card(ocr_result)
-        print(f"Soil data: {soil_data}")
+        # Analyze soil data - extract values AND status text from OCR
+        soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
+        print(f"Soil data parsed successfully")
+        print(f"Raw values found: {len(raw_values)}")
+        print(f"Status info (from OCR): {len(status_info)} items")
 
-        # Get nutrient status
-        nutrient_status = analysis_service.get_nutrient_status(soil_data)
+        # Get nutrient status using OCR-extracted status text
+        nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
         print(f"Nutrient status count: {len(nutrient_status)}")
 
         return AnalysisResponse(

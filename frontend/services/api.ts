@@ -80,9 +80,11 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
  * Analyze an uploaded image
  */
 export async function analyzeImage(imageId: string): Promise<AnalysisResponse> {
-  const response = await apiClient.post<AnalysisResponse>(ENDPOINTS.analyze, {
-    image_id: imageId,
-  });
+  const response = await apiClient.post<AnalysisResponse>(
+    ENDPOINTS.analyze,
+    { image_id: imageId },
+    { timeout: 120000 } // 2 minutes for OCR processing
+  );
 
   return response.data;
 }

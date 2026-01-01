@@ -12,7 +12,8 @@
 export const API_URL = "http://192.168.29.51:8000";
 
 // API request timeout (in milliseconds)
-export const API_TIMEOUT = 10000;
+// OCR can take 30+ seconds on first run
+export const API_TIMEOUT = 60000;
 
 // API endpoints
 export const ENDPOINTS = {

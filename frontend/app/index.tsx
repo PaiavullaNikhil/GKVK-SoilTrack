@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import * as Speech from "expo-speech";
@@ -25,7 +25,12 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Logo/Header Section */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
@@ -103,35 +108,43 @@ export default function HomeScreen() {
           <Text style={styles.stepText}>ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ</Text>
         </View>
       </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: "#E8F5E9",
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    marginTop: 10,
     marginBottom: 15,
   },
+  logoContainer: {
+    width: 70,
+    height: 70,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   logoText: {
-    fontSize: 40,
+    fontSize: 35,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#1B5E20",
     textAlign: "center",
@@ -145,7 +158,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 25,
+    marginBottom: 15,
   },
   statusDot: {
     width: 10,
@@ -158,14 +171,14 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   actionsContainer: {
-    marginBottom: 30,
+    marginBottom: 20,
   },
   primaryButton: {
     backgroundColor: "#1B5E20",
-    borderRadius: 15,
-    padding: 25,
+    borderRadius: 12,
+    padding: 18,
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
     elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -174,36 +187,36 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 12,
+    padding: 15,
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
     borderWidth: 2,
     borderColor: "#1B5E20",
   },
   buttonIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+    fontSize: 30,
+    marginBottom: 6,
   },
   buttonText: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
   },
   buttonSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#A5D6A7",
-    marginTop: 4,
+    marginTop: 3,
   },
   buttonTextSecondary: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#1B5E20",
   },
   buttonSubtextSecondary: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#666",
-    marginTop: 4,
+    marginTop: 3,
   },
   voiceButton: {
     flexDirection: "row",
@@ -224,8 +237,8 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 12,
+    padding: 15,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -233,31 +246,31 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
   },
   infoTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 15,
+    marginBottom: 12,
     textAlign: "center",
   },
   infoStep: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   stepNumber: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     backgroundColor: "#1B5E20",
-    borderRadius: 14,
+    borderRadius: 12,
     color: "#fff",
     textAlign: "center",
-    lineHeight: 28,
-    fontSize: 14,
+    lineHeight: 24,
+    fontSize: 12,
     fontWeight: "bold",
-    marginRight: 12,
+    marginRight: 10,
   },
   stepText: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#333",
     flex: 1,
   },

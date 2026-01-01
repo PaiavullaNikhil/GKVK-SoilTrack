@@ -47,22 +47,34 @@ class NutrientStatus(BaseModel):
 
     nutrient: str
     nutrient_kn: str
-    value: Optional[float]
+    value: Optional[float] = None
+    value_raw: Optional[str] = None  # Original string like "5.0-5.5"
     unit: str
-    status: str  # "low", "medium", "high"
+    status: str  # "low", "medium", "high", "sufficient"
     status_kn: str
     color: str  # Hex color code
 
 
 class SoilData(BaseModel):
-    """Extracted soil data."""
+    """Extracted soil data - all 12 parameters from GKVK soil card."""
 
+    # Primary nutrients
     ph: Optional[float] = None
+    ec: Optional[float] = None  # Electrical conductivity
+    organic_carbon: Optional[float] = None
     nitrogen: Optional[float] = None
     phosphorus: Optional[float] = None
     potassium: Optional[float] = None
-    organic_carbon: Optional[float] = None
-    ec: Optional[float] = None  # Electrical conductivity
+    
+    # Secondary nutrients
+    sulphur: Optional[float] = None
+    
+    # Micronutrients
+    zinc: Optional[float] = None
+    boron: Optional[float] = None
+    iron: Optional[float] = None
+    manganese: Optional[float] = None
+    copper: Optional[float] = None
 
 
 class AnalysisResponse(BaseModel):
@@ -96,4 +108,3 @@ class RecommendationResponse(BaseModel):
     success: bool
     crop_id: str
     recommendations: List[Recommendation]
-

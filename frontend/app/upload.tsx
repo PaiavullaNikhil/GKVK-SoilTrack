@@ -197,7 +197,8 @@ export default function UploadScreen() {
         {/* Analysis Results */}
         {analysisResult && (
           <View style={styles.resultsContainer}>
-            <Text style={styles.resultsTitle}>ವಿಶ್ಲೇಷಣೆ ಫಲಿತಾಂಶ</Text>
+            <Text style={styles.resultsTitle}>ಮಣ್ಣು ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶ</Text>
+            <Text style={styles.resultsSubtitle}>Soil Test Results</Text>
 
             {analysisResult.nutrient_status?.map(
               (nutrient: any, index: number) => (
@@ -205,9 +206,11 @@ export default function UploadScreen() {
                   <View style={styles.nutrientInfo}>
                     <Text style={styles.nutrientName}>{nutrient.nutrient_kn}</Text>
                     <Text style={styles.nutrientValue}>
-                      {nutrient.value !== null
-                        ? `${nutrient.value} ${nutrient.unit}`
-                        : "ಅಳೆದಿಲ್ಲ"}
+                      {nutrient.value_raw 
+                        ? `${nutrient.value_raw} ${nutrient.unit}`
+                        : nutrient.value !== null
+                          ? `${nutrient.value} ${nutrient.unit}`
+                          : "—"}
                     </Text>
                   </View>
                   <View
@@ -342,6 +345,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#1B5E20",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  resultsSubtitle: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 15,
     textAlign: "center",
   },
