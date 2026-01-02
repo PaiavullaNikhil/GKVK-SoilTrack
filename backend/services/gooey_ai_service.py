@@ -3,8 +3,16 @@
 import httpx
 import json
 from typing import Optional, List
-from models import SoilData, Recommendation
+from models import SoilData, Recommendation, NutrientStatus
 from config import GOOEY_AI_API_KEY, GOOEY_AI_BASE_URL, FARMERCHAT_MODEL
+
+# Import log function from main
+try:
+    from main import log
+except ImportError:
+    # Fallback if main is not available
+    def log(msg):
+        print(f"[GooeyAI] {msg}")
 
 
 class GooeyAIService:
@@ -46,16 +54,44 @@ class GooeyAIService:
         
         return "\n".join(nutrients) if nutrients else "No soil data available"
 
-    def _create_prompt(self, crop_name: str, crop_name_kn: str, soil_data: Optional[SoilData]) -> str:
+    def _format_nutrient_status(self, nutrient_status: Optional[List[NutrientStatus]]) -> str:
+        """Format nutrient status with color indicators for the AI."""
+        if not nutrient_status:
+            return "No nutrient status analysis available"
+        
+        status_lines = []
+        for nutrient in nutrient_status:
+            status_indicator = ""
+            if nutrient.color == "#EF4444":  # RED
+                status_indicator = "⚠️ LOW/DEFICIENT - URGENT CORRECTION NEEDED"
+            elif nutrient.color == "#F59E0B":  # YELLOW
+                status_indicator = "⚡ MEDIUM - Consider supplementation"
+            elif nutrient.color == "#10B981":  # GREEN
+                status_indicator = "✅ SUFFICIENT - No action needed"
+            else:
+                status_indicator = "❓ NOT DETECTED"
+            
+            value_str = nutrient.value_raw if nutrient.value_raw else (f"{nutrient.value}" if nutrient.value is not None else "Not available")
+            status_lines.append(f"{nutrient.nutrient_kn} ({nutrient.nutrient}): {value_str} {nutrient.unit} - {status_indicator} - Status: {nutrient.status_kn}")
+        
+        return "\n".join(status_lines)
+
+    def _create_prompt(self, crop_name: str, crop_name_kn: str, soil_data: Optional[SoilData], nutrient_status: Optional[List[NutrientStatus]] = None) -> str:
         """Create a prompt for FarmerCHAT."""
         soil_info = self._format_soil_data(soil_data) if soil_data else "No soil test data available"
+        status_info = self._format_nutrient_status(nutrient_status) if nutrient_status else "No nutrient status analysis available"
         
-        prompt = f"""You are an expert agricultural advisor helping farmers in Karnataka, India. Provide specific, actionable fertilizer and management recommendations.
+        prompt = f"""You are an expert agricultural advisor helping farmers in Karnataka, India. Provide specific, actionable fertilizer and management recommendations based on the soil test analysis.
 
 Crop: {crop_name} ({crop_name_kn})
 
-Soil Test Results:
+Soil Test Results (Raw Values):
 {soil_info}
+
+Nutrient Status Analysis:
+{status_info}
+
+IMPORTANT: Focus on nutrients marked as "⚠️ LOW/DEFICIENT" - these need immediate correction. For each deficient nutrient, calculate the exact amount of fertilizer needed and provide specific application methods.
 
 Please provide detailed recommendations in the following format (respond in JSON format with an array of recommendations):
 {{
@@ -73,19 +109,36 @@ Please provide detailed recommendations in the following format (respond in JSON
   ]
 }}
 
-Provide 3-5 specific recommendations based on the soil test results and crop requirements. Focus on:
-1. Nutrient deficiencies that need correction
-2. Optimal fertilizer application timing and methods
-3. Soil pH correction if needed
-4. Micronutrient supplementation if required
-5. Best practices for the specific crop
+Provide 5-8 comprehensive recommendations based on the soil test results and crop requirements. CRITICAL REQUIREMENTS:
 
-Make recommendations practical, specific, and suitable for Karnataka's agricultural conditions."""
+1. **For each LOW/DEFICIENT nutrient (marked with ⚠️)**: 
+   - Calculate the EXACT amount of fertilizer needed based on the deficiency
+   - Specify the fertilizer name (e.g., Urea for N, DAP for P, MOP for K, Zinc Sulphate for Zn)
+   - Provide exact dosage in kg/ha with calculation
+   - Specify application method (basal, split application, foliar spray, etc.)
+   - Specify timing (at sowing, 30 DAS, 45 DAS, etc.)
+
+2. **For MEDIUM nutrients (marked with ⚡)**: Provide optional optimization recommendations
+
+3. **Soil pH correction**: If pH is outside 6.5-7.5 range, provide specific lime/gypsum recommendations
+
+4. **Application methods**: Be specific - "50% basal at sowing, 25% at 30 DAS, 25% at 60 DAS"
+
+5. **Timing**: Specify exact crop growth stages (DAS = Days After Sowing)
+
+6. **Best practices**: Include mixing instructions, when to spray (morning/evening), etc.
+
+CALCULATION EXAMPLES:
+- Nitrogen: If current is 120 kg/ha and target is 280 kg/ha, deficiency is 160 kg/ha. Urea contains 46% N, so need (160/0.46)*1.2 = ~417 kg/ha Urea
+- Phosphorus: If current is 15 kg/ha and target is 57 kg/ha, deficiency is 42 kg/ha. DAP contains 46% P2O5, so need (42*1.3/0.46)*1.2 = ~143 kg/ha DAP
+- Micronutrients: Provide specific amounts based on critical limits (e.g., Zinc < 0.6 ppm needs 25 kg/ha Zinc Sulphate)
+
+Make recommendations practical, specific, calculation-based, and suitable for Karnataka's agricultural conditions. Include both English and Kannada translations."""
         
         return prompt
 
     async def get_recommendations(
-        self, crop_id: str, crop_name: str, crop_name_kn: str, soil_data: Optional[SoilData] = None
+        self, crop_id: str, crop_name: str, crop_name_kn: str, soil_data: Optional[SoilData] = None, nutrient_status: Optional[List[NutrientStatus]] = None
     ) -> Optional[List[Recommendation]]:
         """
         Get AI-powered recommendations from Gooey AI's FarmerCHAT.
@@ -100,116 +153,113 @@ Make recommendations practical, specific, and suitable for Karnataka's agricultu
             List of recommendations from FarmerCHAT
         """
         if not self.api_key:
-            print("Gooey AI API key not configured. Skipping AI recommendations.")
+            log("Gooey AI API key not configured. Skipping AI recommendations.")
             return None  # Return None to trigger fallback to default recommendations
         
-        prompt = self._create_prompt(crop_name, crop_name_kn, soil_data)
+        prompt = self._create_prompt(crop_name, crop_name_kn, soil_data, nutrient_status)
         
         try:
             # Gooey AI API call
-            # Try multiple common API endpoint patterns
+            # Based on Gooey AI dashboard, the endpoint is /v2/video-bots?example_id={example_id}
+            # The model ID in config is actually the example_id
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Try different endpoint patterns
-                endpoints_to_try = [
-                    f"{self.base_url}/run/{self.model}",
-                    f"{self.base_url}/v2/run/{self.model}",
-                    f"{self.base_url}/chat",
-                    f"{self.base_url}/completions",
-                ]
+                # Gooey AI uses /v2/video-bots endpoint with example_id as query parameter
+                endpoint = f"{self.base_url}/video-bots?example_id={self.model}"
                 
-                payloads_to_try = [
-                    {"input": prompt, "model": self.model},
-                    {"prompt": prompt, "model": self.model},
-                    {"message": prompt, "model": self.model},
-                    {"text": prompt},
-                ]
+                # Gooey AI payload format - based on dashboard example
+                payload = {
+                    "input_prompt": prompt,
+                    "messages": [],
+                }
                 
-                response = None
-                result = None
-                last_error = None
+                log(f"Calling Gooey AI endpoint: {endpoint}")
+                log(f"Payload keys: {list(payload.keys())}")
                 
-                # Try different combinations
-                for endpoint in endpoints_to_try:
-                    for payload in payloads_to_try:
-                        try:
-                            response = await client.post(
-                                endpoint,
-                                headers={
-                                    "Authorization": f"Bearer {self.api_key}",
-                                    "Content-Type": "application/json",
-                                },
-                                json=payload,
-                            )
-                            if response.status_code == 200:
-                                result = response.json()
-                                break
-                            else:
-                                last_error = f"Status {response.status_code}: {response.text}"
-                        except Exception as e:
-                            last_error = str(e)
-                            continue
-                    if result:
-                        break
-                
-                if not result:
-                    if response:
-                        response.raise_for_status()
-                    else:
-                        raise httpx.HTTPError(f"Failed to connect to Gooey AI: {last_error}")
-                
-                # Parse the response - try multiple common response formats
-                ai_response = (
-                    result.get("output") or 
-                    result.get("text") or 
-                    result.get("response") or 
-                    result.get("message") or
-                    result.get("content") or
-                    str(result)
+                response = await client.post(
+                    endpoint,
+                    headers={
+                        "Authorization": f"bearer {self.api_key}",  # Gooey AI uses lowercase "bearer"
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
                 )
                 
-                # Try to parse JSON from the response
-                try:
-                    # If response is a string, try to extract JSON
-                    if isinstance(ai_response, str):
-                        # Try to find JSON in the response
+                log(f"Gooey AI response status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    log(f"Gooey AI success! Response keys: {list(result.keys()) if isinstance(result, dict) else 'not a dict'}")
+                    
+                    # Parse the response - Gooey AI returns: {"output": {"output_text": ["..."]}}
+                    output = result.get("output", {})
+                    output_text_array = output.get("output_text", [])
+                    
+                    if not output_text_array:
+                        log("Gooey AI response has no output_text")
+                        return self._get_fallback_recommendations()
+                    
+                    # Get the first output text (the AI's response)
+                    ai_response = output_text_array[0] if isinstance(output_text_array, list) else str(output_text_array)
+                    log(f"Gooey AI response text length: {len(ai_response)}")
+                    
+                    # Try to parse JSON from the response
+                    try:
+                        # Try to find JSON in the response text
                         json_start = ai_response.find("{")
                         json_end = ai_response.rfind("}") + 1
+                        
                         if json_start >= 0 and json_end > json_start:
-                            ai_response = ai_response[json_start:json_end]
-                    
-                    parsed = json.loads(ai_response) if isinstance(ai_response, str) else ai_response
-                    recommendations_data = parsed.get("recommendations", [])
-                    
-                    # Convert to Recommendation objects
-                    recommendations = []
-                    for rec in recommendations_data:
-                        recommendations.append(Recommendation(
-                            title=rec.get("title", "Recommendation"),
-                            title_kn=rec.get("title_kn", "ಶಿಫಾರಸು"),
-                            description=rec.get("description", ""),
-                            description_kn=rec.get("description_kn", ""),
-                            fertilizer=rec.get("fertilizer"),
-                            fertilizer_kn=rec.get("fertilizer_kn"),
-                            dosage=rec.get("dosage"),
-                            dosage_kn=rec.get("dosage_kn"),
-                        ))
-                    
-                    return recommendations if recommendations else self._get_fallback_recommendations()
-                    
-                except (json.JSONDecodeError, KeyError) as e:
-                    print(f"Failed to parse AI response: {e}")
-                    print(f"AI Response: {ai_response}")
-                    # Fallback to default recommendations
+                            # Extract JSON portion
+                            json_str = ai_response[json_start:json_end]
+                            parsed = json.loads(json_str)
+                        else:
+                            # If no JSON found, try parsing the whole response
+                            parsed = json.loads(ai_response)
+                        
+                        recommendations_data = parsed.get("recommendations", [])
+                        
+                        if not recommendations_data:
+                            log("No recommendations found in parsed JSON")
+                            return self._get_fallback_recommendations()
+                        
+                        # Convert to Recommendation objects
+                        recommendations = []
+                        for rec in recommendations_data:
+                            recommendations.append(Recommendation(
+                                title=rec.get("title", "Recommendation"),
+                                title_kn=rec.get("title_kn", "ಶಿಫಾರಸು"),
+                                description=rec.get("description", ""),
+                                description_kn=rec.get("description_kn", ""),
+                                fertilizer=rec.get("fertilizer"),
+                                fertilizer_kn=rec.get("fertilizer_kn"),
+                                dosage=rec.get("dosage"),
+                                dosage_kn=rec.get("dosage_kn"),
+                            ))
+                        
+                        log(f"Successfully parsed {len(recommendations)} recommendations from Gooey AI")
+                        return recommendations
+                        
+                    except (json.JSONDecodeError, KeyError) as e:
+                        log(f"Failed to parse AI response as JSON: {e}")
+                        log(f"AI Response (first 500 chars): {str(ai_response)[:500]}")
+                        # Fallback to default recommendations
+                        return self._get_fallback_recommendations()
+                else:
+                    error_text = response.text[:500]
+                    log(f"Gooey AI error: Status {response.status_code}: {error_text}")
+                    response.raise_for_status()
                     return self._get_fallback_recommendations()
                     
         except httpx.HTTPError as e:
-            print(f"Gooey AI API error: {e}")
+            log(f"Gooey AI API error: {e}")
+            log(f"NOTE: If you see 404 errors, the model ID '{self.model}' might be incorrect.")
+            log(f"Check your Gooey AI dashboard for the correct model ID and update FARMERCHAT_MODEL in config.py")
             # Fallback to default recommendations
             return self._get_fallback_recommendations()
         except Exception as e:
-            print(f"Unexpected error calling Gooey AI: {e}")
+            log(f"Unexpected error calling Gooey AI: {e}")
             import traceback
-            traceback.print_exc()
+            log(traceback.format_exc())
             return self._get_fallback_recommendations()
 
     def _get_fallback_recommendations(self) -> List[Recommendation]:

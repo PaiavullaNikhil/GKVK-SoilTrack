@@ -194,17 +194,20 @@ async def analyze_image(request: AnalysisRequest):
 async def get_recommendation(crop_id: str, image_id: str = None):
     """Get recommendations for a specific crop based on soil analysis."""
     try:
-        # Get soil data if image_id provided
+        # Get soil data and nutrient status if image_id provided
         soil_data = None
+        nutrient_status = None
         if image_id:
             image_path = UPLOAD_DIR / image_id
             if image_path.exists():
                 ocr_result = ocr_service.extract_text(str(image_path))
                 # analyze_soil_card returns (soil_data, raw_values, status_info)
-                soil_data, _, _ = analysis_service.analyze_soil_card(ocr_result)
+                soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
+                # Get nutrient status with color/status information
+                nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
 
         # Get recommendations (now async with Gooey AI)
-        recommendations = await recommendation_service.get_recommendations(crop_id, soil_data)
+        recommendations = await recommendation_service.get_recommendations(crop_id, soil_data, nutrient_status)
 
         return RecommendationResponse(
             success=True,

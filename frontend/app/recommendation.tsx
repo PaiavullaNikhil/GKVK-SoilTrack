@@ -144,28 +144,28 @@ export default function RecommendationScreen() {
               <View style={styles.detailsContainer}>
                 {rec.fertilizer && (
                   <View style={styles.detailRow}>
-                    <View>
+                    <View style={styles.detailLabelContainer}>
                       <Text style={styles.detailLabel}>ಗೊಬ್ಬರ:</Text>
                       <Text style={styles.detailLabelEn}>Fertilizer:</Text>
                     </View>
-                    <View>
-                      <Text style={styles.detailValue}>{rec.fertilizer_kn}</Text>
+                    <View style={styles.detailValueContainer}>
+                      <Text style={styles.detailValue} numberOfLines={0}>{rec.fertilizer_kn}</Text>
                       {rec.fertilizer && rec.fertilizer !== rec.fertilizer_kn && (
-                        <Text style={styles.detailValueEn}>{rec.fertilizer}</Text>
+                        <Text style={styles.detailValueEn} numberOfLines={0}>{rec.fertilizer}</Text>
                       )}
                     </View>
                   </View>
                 )}
                 {rec.dosage && (
                   <View style={styles.detailRow}>
-                    <View>
+                    <View style={styles.detailLabelContainer}>
                       <Text style={styles.detailLabel}>ಪ್ರಮಾಣ:</Text>
                       <Text style={styles.detailLabelEn}>Dosage:</Text>
                     </View>
-                    <View>
-                      <Text style={styles.detailValue}>{rec.dosage_kn}</Text>
+                    <View style={styles.detailValueContainer}>
+                      <Text style={styles.detailValue} numberOfLines={0}>{rec.dosage_kn}</Text>
                       {rec.dosage && rec.dosage !== rec.dosage_kn && (
-                        <Text style={styles.detailValueEn}>{rec.dosage}</Text>
+                        <Text style={styles.detailValueEn} numberOfLines={0}>{rec.dosage}</Text>
                       )}
                     </View>
                   </View>
@@ -318,30 +318,39 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     flexDirection: "row",
-    marginBottom: 8,
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
+  detailLabelContainer: {
+    width: 80,
+    flexShrink: 0,
   },
   detailLabel: {
     fontSize: 14,
     color: "#666",
-    width: 80,
   },
   detailLabelEn: {
     fontSize: 11,
     color: "#999",
-    width: 80,
     marginTop: 2,
+    textAlign: "left",
+  },
+  detailValueContainer: {
+    flex: 1,
+    flexShrink: 1,
+    paddingLeft: 10,
   },
   detailValue: {
     fontSize: 14,
     color: "#1B5E20",
     fontWeight: "500",
-    flex: 1,
+    flexWrap: "wrap",
   },
   detailValueEn: {
     fontSize: 12,
     color: "#666",
-    flex: 1,
     marginTop: 2,
+    flexWrap: "wrap",
   },
   actionsContainer: {
     flexDirection: "row",
@@ -353,26 +362,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#1B5E20",
     borderRadius: 15,
     padding: 15,
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
   newScanIcon: {
     fontSize: 20,
-    marginRight: 8,
+    marginBottom: 4,
   },
   newScanText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
   },
   homeButton: {
     flex: 1,
     backgroundColor: "#fff",
     borderRadius: 15,
     padding: 15,
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -381,12 +391,13 @@ const styles = StyleSheet.create({
   },
   homeIcon: {
     fontSize: 20,
-    marginRight: 8,
+    marginBottom: 4,
   },
   homeText: {
     color: "#1B5E20",
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
 

@@ -40,6 +40,21 @@ export GOOEY_AI_API_KEY="your_api_key_here"
 
 2. The application will automatically load it (python-dotenv is already installed)
 
+## Finding Your Model ID and Endpoint
+
+**IMPORTANT**: You need to find the correct Model ID and endpoint format from your Gooey AI dashboard:
+
+1. **Log into Gooey AI Dashboard**: https://gooey.ai
+2. **Navigate to your Models/Recipes**: Look for your FarmerCHAT model or recipe
+3. **Find the Model/Recipe ID**: 
+   - It's usually displayed in the URL or in the model/recipe details
+   - It might look like: `ktdv7wi1h578`, `model_abc123`, or similar
+   - **Copy this exact ID**
+4. **Check the API Documentation**: 
+   - In your Gooey AI dashboard, look for "API" or "Integration" section
+   - Check what endpoint format is shown (e.g., `/v2/run/{model_id}`, `/v2/recipes/{recipe_id}`, etc.)
+   - Note the required payload format (e.g., `input_prompt`, `input`, `prompt`, etc.)
+
 ## Configuration
 
 The Gooey AI settings are in `backend/config.py`:
@@ -47,10 +62,21 @@ The Gooey AI settings are in `backend/config.py`:
 ```python
 GOOEY_AI_API_KEY = os.getenv("GOOEY_AI_API_KEY", "")
 GOOEY_AI_BASE_URL = "https://api.gooey.ai/v2"
-FARMERCHAT_MODEL = "FarmerCHAT"
+FARMERCHAT_MODEL = "your-model-id-here"  # Replace with your actual model ID from dashboard
 ```
 
-If you need to adjust the API endpoint or model name, edit these values in `config.py`.
+**Update `FARMERCHAT_MODEL`** in `config.py` with the model ID you found in your dashboard.
+
+## Testing the API Connection
+
+Run the test script to verify your API key and model ID:
+
+```bash
+cd backend
+python test_gooey_ai.py
+```
+
+This will test different endpoint formats and show you which one works (if any).
 
 ## How It Works
 
@@ -86,8 +112,17 @@ To test if the integration is working:
 - Check the backend logs for detailed error messages
 - The system will automatically fall back to default recommendations
 
+**404 Not Found Error:**
+- This usually means the **Model ID is incorrect** or the **endpoint format is wrong**
+- **Solution**: 
+  1. Check your Gooey AI dashboard for the correct Model/Recipe ID
+  2. Verify the endpoint format in Gooey AI's API documentation
+  3. Update `FARMERCHAT_MODEL` in `config.py` with the correct ID
+  4. If the endpoint format is different, you may need to update `gooey_ai_service.py`
+  5. Run `python test_gooey_ai.py` to test different endpoint formats
+
 **Wrong API endpoint:**
-- The service tries multiple common endpoint patterns
-- If none work, you may need to update `GOOEY_AI_BASE_URL` in `config.py`
-- Check Gooey AI's documentation for the correct endpoint format
+- The service tries multiple common endpoint patterns automatically
+- If none work, check your Gooey AI dashboard for the exact endpoint format
+- You may need to update the endpoint patterns in `backend/services/gooey_ai_service.py`
 

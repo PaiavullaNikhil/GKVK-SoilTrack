@@ -369,11 +369,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#fff",
     fontWeight: "bold",
+    textAlign: "center",
   },
   uploadButtonTextEn: {
     fontSize: 12,
     color: "#A5D6A7",
     marginTop: 2,
+    textAlign: "center",
   },
   resultsContainer: {
     backgroundColor: "#fff",
@@ -440,11 +442,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+    textAlign: "center",
   },
   recommendButtonTextEn: {
     color: "#A5D6A7",
     fontSize: 12,
     marginTop: 2,
+    textAlign: "center",
   },
   cameraContainer: {
     flex: 1,
@@ -509,12 +513,15 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   cancelButtonTextEn: {
     color: "#fff",
     fontSize: 12,
     marginTop: 2,
     opacity: 0.9,
+    textAlign: "center",
   },
 });
 

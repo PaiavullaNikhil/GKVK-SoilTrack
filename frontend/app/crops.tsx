@@ -230,11 +230,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+    textAlign: "center",
   },
   continueButtonTextEn: {
     color: "#A5D6A7",
     fontSize: 12,
     marginTop: 2,
+    textAlign: "center",
   },
 });
 
