@@ -37,7 +37,6 @@ export default function HomeScreen() {
           <Text style={styles.logoText}>🌱</Text>
         </View>
         <Text style={styles.title}>GKVK ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ</Text>
-        <Text style={styles.subtitle}>Soil Health Card Analyzer</Text>
       </View>
 
       {/* Connection Status */}
