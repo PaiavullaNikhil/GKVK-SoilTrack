@@ -43,9 +43,9 @@ export default function UploadScreen() {
       const result = await requestPermission();
       if (!result.granted) {
         Alert.alert(
-          "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ",
-          "ಕ್ಯಾಮೆರಾ ಬಳಸಲು ಅನುಮತಿ ನೀಡಿ",
-          [{ text: "ಸರಿ" }]
+          "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ / Permission Required",
+          "ಕ್ಯಾಮೆರಾ ಬಳಸಲು ಅನುಮತಿ ನೀಡಿ\nGrant permission to use camera",
+          [{ text: "ಸರಿ / OK" }]
         );
         return;
       }
@@ -79,12 +79,19 @@ export default function UploadScreen() {
 
       // Speak result
       Speech.speak("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ", { language: "kn-IN" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload/Analysis error:", error);
+      // Log detailed error info
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data));
+      } else if (error.request) {
+        console.error("No response received - network error");
+      }
       Alert.alert(
-        "ದೋಷ",
-        "ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಅಥವಾ ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
-        [{ text: "ಸರಿ" }]
+        "ದೋಷ / Error",
+        `ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಅಥವಾ ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ\nFailed to upload or analyze image\n\n${error.response?.data?.detail || error.message}`,
+        [{ text: "ಸರಿ / OK" }]
       );
     } finally {
       setIsUploading(false);
@@ -105,9 +112,14 @@ export default function UploadScreen() {
         <CameraView style={styles.camera} facing="back">
           <View style={styles.cameraOverlay}>
             <View style={styles.cameraGuide}>
-              <Text style={styles.cameraGuideText}>
-                ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಇಲ್ಲಿ ಹಿಡಿಯಿರಿ
-              </Text>
+              <View>
+                <Text style={styles.cameraGuideText}>
+                  ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಇಲ್ಲಿ ಹಿಡಿಯಿರಿ
+                </Text>
+                <Text style={styles.cameraGuideTextEn}>
+                  Position soil health card here
+                </Text>
+              </View>
             </View>
           </View>
         </CameraView>
@@ -116,7 +128,10 @@ export default function UploadScreen() {
             style={styles.cancelButton}
             onPress={() => setShowCamera(false)}
           >
-            <Text style={styles.cancelButtonText}>ರದ್ದುಮಾಡಿ</Text>
+            <View>
+              <Text style={styles.cancelButtonText}>ರದ್ದುಮಾಡಿ</Text>
+              <Text style={styles.cancelButtonTextEn}>Cancel</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.captureButton}
@@ -159,12 +174,18 @@ export default function UploadScreen() {
         <View style={styles.buttonsRow}>
           <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
             <Text style={styles.actionIcon}>📷</Text>
-            <Text style={styles.actionText}>ಕ್ಯಾಮೆರಾ</Text>
+            <View>
+              <Text style={styles.actionText}>ಕ್ಯಾಮೆರಾ</Text>
+              <Text style={styles.actionTextEn}>Camera</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={pickImage}>
             <Text style={styles.actionIcon}>🖼️</Text>
-            <Text style={styles.actionText}>ಗ್ಯಾಲರಿ</Text>
+            <View>
+              <Text style={styles.actionText}>ಗ್ಯಾಲರಿ</Text>
+              <Text style={styles.actionTextEn}>Gallery</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -181,14 +202,22 @@ export default function UploadScreen() {
             {isUploading || isAnalyzing ? (
               <>
                 <ActivityIndicator color="#fff" style={{ marginRight: 10 }} />
-                <Text style={styles.uploadButtonText}>
-                  {isUploading ? "ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ..." : "ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ..."}
-                </Text>
+                <View>
+                  <Text style={styles.uploadButtonText}>
+                    {isUploading ? "ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ..." : "ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ..."}
+                  </Text>
+                  <Text style={styles.uploadButtonTextEn}>
+                    {isUploading ? "Uploading..." : "Analyzing..."}
+                  </Text>
+                </View>
               </>
             ) : (
               <>
                 <Text style={styles.uploadIcon}>🔍</Text>
-                <Text style={styles.uploadButtonText}>ವಿಶ್ಲೇಷಿಸಿ</Text>
+                <View>
+                  <Text style={styles.uploadButtonText}>ವಿಶ್ಲೇಷಿಸಿ</Text>
+                  <Text style={styles.uploadButtonTextEn}>Analyze</Text>
+                </View>
               </>
             )}
           </TouchableOpacity>
@@ -229,9 +258,14 @@ export default function UploadScreen() {
               style={styles.recommendButton}
               onPress={goToRecommendations}
             >
+              <View>
               <Text style={styles.recommendButtonText}>
                 ಶಿಫಾರಸು ಪಡೆಯಿರಿ →
               </Text>
+              <Text style={styles.recommendButtonTextEn}>
+                Get Recommendations →
+              </Text>
+            </View>
             </TouchableOpacity>
           </View>
         )}
@@ -310,6 +344,11 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
   },
+  actionTextEn: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
   uploadButton: {
     backgroundColor: "#1B5E20",
     borderRadius: 15,
@@ -330,6 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#fff",
     fontWeight: "bold",
+  },
+  uploadButtonTextEn: {
+    fontSize: 12,
+    color: "#A5D6A7",
+    marginTop: 2,
   },
   resultsContainer: {
     backgroundColor: "#fff",
@@ -397,6 +441,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
+  recommendButtonTextEn: {
+    color: "#A5D6A7",
+    fontSize: 12,
+    marginTop: 2,
+  },
   cameraContainer: {
     flex: 1,
   },
@@ -422,6 +471,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     textAlign: "center",
+  },
+  cameraGuideTextEn: {
+    color: "#fff",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 4,
+    opacity: 0.9,
   },
   cameraControls: {
     flexDirection: "row",
@@ -453,6 +509,12 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontSize: 16,
+  },
+  cancelButtonTextEn: {
+    color: "#fff",
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.9,
   },
 });
 

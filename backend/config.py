@@ -2,6 +2,10 @@
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent
@@ -25,4 +29,10 @@ CORS_ORIGINS = [
 
 # Supported languages for OCR
 OCR_LANGUAGES = ["en", "kan"]  # English and Kannada
+
+# Gooey AI Configuration
+# Get your API key from https://gooey.ai
+GOOEY_AI_API_KEY = os.getenv("GOOEY_AI_API_KEY", "")
+GOOEY_AI_BASE_URL = "https://api.gooey.ai/v2"
+FARMERCHAT_MODEL = "FarmerCHAT"  # Or the specific model ID for FarmerCHAT
 

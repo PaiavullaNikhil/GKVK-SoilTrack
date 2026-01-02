@@ -5,3 +5,7 @@ pillow
 pydantic
 python-dotenv
 google-generativeai
+httpx
+easyocr
+opencv-python
+numpy

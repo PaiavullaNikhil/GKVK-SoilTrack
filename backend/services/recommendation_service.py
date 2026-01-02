@@ -2,10 +2,15 @@
 
 from typing import List, Optional
 from models import Crop, Recommendation, SoilData
+from services.gooey_ai_service import GooeyAIService
 
 
 class RecommendationService:
     """Service for crop recommendations."""
+
+    def __init__(self):
+        """Initialize the recommendation service with Gooey AI integration."""
+        self.gooey_ai = GooeyAIService()
 
     # Available crops with Kannada names
     CROPS = {
@@ -141,23 +146,49 @@ class RecommendationService:
         """Get list of available crops."""
         return list(self.CROPS.values())
 
-    def get_recommendations(
+    async def get_recommendations(
         self, crop_id: str, soil_data: Optional[SoilData] = None
     ) -> List[Recommendation]:
         """
-        Get recommendations for a specific crop.
+        Get recommendations for a specific crop using Gooey AI's FarmerCHAT.
 
         Args:
             crop_id: Crop identifier
             soil_data: Optional soil data for customized recommendations
 
         Returns:
-            List of recommendations
+            List of recommendations from Gooey AI FarmerCHAT
         """
         if crop_id not in self.CROPS:
             raise ValueError(f"Unknown crop: {crop_id}")
 
-        # Get base recommendations for the crop
+        crop = self.CROPS[crop_id]
+        
+        # Try to get AI-powered recommendations from Gooey AI
+        try:
+            ai_recommendations = await self.gooey_ai.get_recommendations(
+                crop_id=crop_id,
+                crop_name=crop.name,
+                crop_name_kn=crop.name_kn,
+                soil_data=soil_data
+            )
+            
+            # If we got valid recommendations from AI, return them
+            # (None means API key not configured, empty list means API failed)
+            if ai_recommendations and len(ai_recommendations) > 0:
+                # Check if it's the fallback recommendation (only 1 item with specific title)
+                if len(ai_recommendations) == 1 and ai_recommendations[0].title == "Soil Testing Recommended":
+                    # This is a fallback from API failure, use default instead
+                    pass
+                else:
+                    return ai_recommendations
+        except Exception as e:
+            print(f"Gooey AI recommendation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall through to default recommendations
+        
+        # Fallback to base recommendations if AI fails
         recommendations = self.BASE_RECOMMENDATIONS.get(
             crop_id, self.DEFAULT_RECOMMENDATIONS
         )

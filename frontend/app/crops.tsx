@@ -83,7 +83,10 @@ export default function CropsScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1B5E20" />
-        <Text style={styles.loadingText}>ಬೆಳೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...</Text>
+        <View>
+          <Text style={styles.loadingText}>ಬೆಳೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...</Text>
+          <Text style={styles.loadingTextEn}>Loading crops...</Text>
+        </View>
       </View>
     );
   }
@@ -107,7 +110,10 @@ export default function CropsScreen() {
       {selectedCrop && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-            <Text style={styles.continueButtonText}>ಮುಂದುವರಿಸಿ →</Text>
+            <View>
+              <Text style={styles.continueButtonText}>ಮುಂದುವರಿಸಿ →</Text>
+              <Text style={styles.continueButtonTextEn}>Continue →</Text>
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -130,6 +136,13 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 16,
     color: "#666",
+    textAlign: "center",
+  },
+  loadingTextEn: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#999",
+    textAlign: "center",
   },
   header: {
     padding: 20,
@@ -217,6 +230,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  continueButtonTextEn: {
+    color: "#A5D6A7",
+    fontSize: 12,
+    marginTop: 2,
   },
 });
 

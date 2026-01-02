@@ -144,14 +144,30 @@ export default function RecommendationScreen() {
               <View style={styles.detailsContainer}>
                 {rec.fertilizer && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>ಗೊಬ್ಬರ:</Text>
-                    <Text style={styles.detailValue}>{rec.fertilizer_kn}</Text>
+                    <View>
+                      <Text style={styles.detailLabel}>ಗೊಬ್ಬರ:</Text>
+                      <Text style={styles.detailLabelEn}>Fertilizer:</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.detailValue}>{rec.fertilizer_kn}</Text>
+                      {rec.fertilizer && rec.fertilizer !== rec.fertilizer_kn && (
+                        <Text style={styles.detailValueEn}>{rec.fertilizer}</Text>
+                      )}
+                    </View>
                   </View>
                 )}
                 {rec.dosage && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>ಪ್ರಮಾಣ:</Text>
-                    <Text style={styles.detailValue}>{rec.dosage_kn}</Text>
+                    <View>
+                      <Text style={styles.detailLabel}>ಪ್ರಮಾಣ:</Text>
+                      <Text style={styles.detailLabelEn}>Dosage:</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.detailValue}>{rec.dosage_kn}</Text>
+                      {rec.dosage && rec.dosage !== rec.dosage_kn && (
+                        <Text style={styles.detailValueEn}>{rec.dosage}</Text>
+                      )}
+                    </View>
                   </View>
                 )}
               </View>
@@ -309,11 +325,23 @@ const styles = StyleSheet.create({
     color: "#666",
     width: 80,
   },
+  detailLabelEn: {
+    fontSize: 11,
+    color: "#999",
+    width: 80,
+    marginTop: 2,
+  },
   detailValue: {
     fontSize: 14,
     color: "#1B5E20",
     fontWeight: "500",
     flex: 1,
+  },
+  detailValueEn: {
+    fontSize: 12,
+    color: "#666",
+    flex: 1,
+    marginTop: 2,
   },
   actionsContainer: {
     flexDirection: "row",

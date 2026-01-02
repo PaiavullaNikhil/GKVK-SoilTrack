@@ -4,6 +4,7 @@
 
 import axios from "axios";
 import { API_URL, API_TIMEOUT, ENDPOINTS } from "../config/api";
+import { initializeAPIUrl } from "../utils/getLocalIP";
 import type {
   UploadResponse,
   AnalysisResponse,
@@ -12,6 +13,7 @@ import type {
 } from "../types";
 
 // Create axios instance with default config
+// baseURL will be updated when IP is detected
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
@@ -20,8 +22,16 @@ const apiClient = axios.create({
   },
 });
 
-// Log the API URL for debugging
-console.log("API URL:", API_URL);
+// Update baseURL when IP is detected
+initializeAPIUrl().then((url) => {
+  apiClient.defaults.baseURL = url;
+  console.log("✅ API Client updated with auto-detected URL:", url);
+}).catch((error) => {
+  console.warn("⚠️ Failed to update API URL:", error);
+});
+
+// Log the initial API URL for debugging
+console.log("API URL (initial):", API_URL);
 
 /**
  * Check if the API is healthy

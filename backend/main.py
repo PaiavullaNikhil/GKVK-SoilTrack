@@ -1,13 +1,27 @@
 """FastAPI backend for GKVK Soil Analysis App."""
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uuid
 import shutil
 from pathlib import Path
+import traceback
+import sys
+from datetime import datetime
 
 from config import CORS_ORIGINS, UPLOAD_DIR
+
+# Debug log file
+DEBUG_LOG = Path(__file__).parent / "debug.log"
+
+def log(msg):
+    """Write to debug log file."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{timestamp}] {msg}\n"
+    with open(DEBUG_LOG, "a", encoding="utf-8") as f:
+        f.write(line)
+    print(line, flush=True)
 from services.ocr_service import OCRService
 from services.analysis_service import AnalysisService
 from services.recommendation_service import RecommendationService
@@ -26,6 +40,34 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Global exception handler to catch ALL errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"\n{'='*60}", file=sys.stderr, flush=True)
+    print(f"UNHANDLED EXCEPTION on {request.method} {request.url}", file=sys.stderr, flush=True)
+    print(f"Error type: {type(exc).__name__}", file=sys.stderr, flush=True)
+    print(f"Error message: {str(exc)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr, flush=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
+# Middleware to log all requests
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    log(f">>> REQUEST: {request.method} {request.url}")
+    log(f"    Headers: {dict(request.headers)}")
+    try:
+        response = await call_next(request)
+        log(f"<<< RESPONSE: {response.status_code}")
+        return response
+    except Exception as e:
+        log(f"!!! ERROR in middleware: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        raise
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -38,12 +80,15 @@ app.add_middleware(
 # Initialize services
 ocr_service = OCRService()
 analysis_service = AnalysisService()
-recommendation_service = RecommendationService()
+recommendation_service = RecommendationService()  # Now has __init__ but it's optional
+
+log("=== SERVER STARTED ===")
 
 
 @app.get("/", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
+    log("Health check called")
     return HealthResponse(
         status="healthy",
         message="GKVK Soil Analysis API is running",
@@ -61,24 +106,40 @@ async def get_crops():
 @app.post("/upload", response_model=UploadResponse)
 async def upload_image(file: UploadFile = File(...)):
     """Upload a soil health card image."""
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/jpg"]
-    if file.content_type not in allowed_types:
+    log(f"Upload request received: filename={file.filename}, content_type={file.content_type}")
+    
+    # Validate file type - be lenient with content types from mobile apps
+    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/octet-stream"]
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ""
+    allowed_extensions = [".jpg", ".jpeg", ".png"]
+    
+    # Accept if content type matches OR if extension matches
+    if file.content_type not in allowed_types and file_ext not in allowed_extensions:
+        log(f"Rejected file: content_type={file.content_type}, ext={file_ext}")
         raise HTTPException(
             status_code=400,
-            detail="Invalid file type. Only JPEG and PNG are allowed.",
+            detail=f"Invalid file type. Got content_type={file.content_type}, ext={file_ext}. Only JPEG and PNG are allowed.",
         )
 
-    # Generate unique filename
-    file_ext = Path(file.filename).suffix
+    # Generate unique filename - use extension from filename or default to .jpg
+    file_ext = Path(file.filename).suffix if file.filename else ".jpg"
+    if not file_ext:
+        file_ext = ".jpg"
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = UPLOAD_DIR / unique_filename
 
+    log(f"Saving to: {file_path}")
+
     # Save file
     try:
+        contents = await file.read()
+        log(f"Read {len(contents)} bytes from upload")
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(contents)
+        log(f"File saved successfully: {file_path}")
     except Exception as e:
+        log(f"Failed to save file: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     return UploadResponse(
@@ -139,10 +200,11 @@ async def get_recommendation(crop_id: str, image_id: str = None):
             image_path = UPLOAD_DIR / image_id
             if image_path.exists():
                 ocr_result = ocr_service.extract_text(str(image_path))
-                soil_data = analysis_service.analyze_soil_card(ocr_result)
+                # analyze_soil_card returns (soil_data, raw_values, status_info)
+                soil_data, _, _ = analysis_service.analyze_soil_card(ocr_result)
 
-        # Get recommendations
-        recommendations = recommendation_service.get_recommendations(crop_id, soil_data)
+        # Get recommendations (now async with Gooey AI)
+        recommendations = await recommendation_service.get_recommendations(crop_id, soil_data)
 
         return RecommendationResponse(
             success=True,

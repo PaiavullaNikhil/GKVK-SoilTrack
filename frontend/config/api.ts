@@ -1,15 +1,28 @@
 /**
  * API Configuration
  *
- * For local development, update API_URL to your machine's IP address.
- * Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
+ * IP address is now auto-detected! No manual configuration needed.
+ * The app will automatically find your computer's IP address on the local network.
  *
- * For production, update this to your deployed backend URL.
+ * For production, set EXPO_PUBLIC_API_URL environment variable.
  */
 
-// UPDATE THIS TO YOUR COMPUTER'S IP ADDRESS
-// Your phone and computer must be on the same WiFi network
-export const API_URL = "http://192.168.29.51:8000";
+import { getAPIUrlSync, initializeAPIUrl } from "../utils/getLocalIP";
+
+// Initialize with sync version (will use fallback initially)
+// Then update asynchronously when IP is detected
+let API_URL = getAPIUrlSync();
+
+// Initialize IP detection (non-blocking)
+initializeAPIUrl().then((url) => {
+  API_URL = url;
+  console.log("✅ Auto-detected API URL:", API_URL);
+}).catch((error) => {
+  console.warn("⚠️ IP auto-detection failed, using fallback:", error);
+});
+
+// Export the API URL (will be updated when detection completes)
+export { API_URL };
 
 // API request timeout (in milliseconds)
 // OCR can take 30+ seconds on first run
