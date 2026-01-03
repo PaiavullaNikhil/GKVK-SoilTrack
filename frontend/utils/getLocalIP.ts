@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 // Fallback IP - automatically updated by detect-ip.js script
 // If auto-detection fails, this will be your current IP
-const FALLBACK_IP = "192.168.29.51";
+const FALLBACK_IP = "192.168.68.63";
 const API_PORT = 8000;
 
 /**
@@ -69,7 +69,7 @@ export async function getLocalIP(): Promise<string> {
     // Method 4: Use fallback (automatically updated by detect-ip.js script)
     // This is the most reliable method since the script runs before app starts
     // Only log if we're in dev mode and the IP seems wrong
-    if (__DEV__ && FALLBACK_IP === "192.168.29.51") {
+    if (__DEV__ && FALLBACK_IP === "192.168.68.63") {
       // This is the default, might need updating
       console.log(`ℹ️  Using fallback IP: ${FALLBACK_IP} (auto-updated by detect-ip.js)`);
     }

@@ -50,6 +50,12 @@ export default function RootLayout() {
         <Stack.Screen
           name="index"
           options={{
+            headerShown: false, // Hide header for landing page
+          }}
+        />
+        <Stack.Screen
+          name="home"
+          options={{
             headerTitle: () => (
               <HeaderTitle kannada="GKVK ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ" english="Soil Health Card Analyzer" />
             ),
