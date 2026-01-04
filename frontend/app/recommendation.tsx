@@ -187,7 +187,7 @@ export default function RecommendationScreen() {
 
           <TouchableOpacity
             style={styles.homeButton}
-            onPress={() => router.push("/")}
+            onPress={() => router.push("/home")}
           >
             <Text style={styles.homeIcon}>🏠</Text>
             <Text style={styles.homeText}>ಮುಖಪುಟ</Text>
