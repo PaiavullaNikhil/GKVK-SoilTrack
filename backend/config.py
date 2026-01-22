@@ -24,6 +24,7 @@ IS_PRODUCTION = bool(
     or os.getenv("DYNO")  # Heroku
     or os.getenv("FLY_APP_NAME")  # Fly.io
     or os.getenv("VERCEL")  # Vercel
+    or os.getenv("SPACE_ID")  # Hugging Face Spaces
 )
 
 # Tesseract path - only for local development
@@ -37,6 +38,8 @@ else:
 # CORS origins
 # Get production URL from environment variable
 PRODUCTION_URL = os.getenv("PRODUCTION_URL", "")
+IS_HUGGINGFACE = bool(os.getenv("SPACE_ID"))  # Hugging Face Spaces
+
 CORS_ORIGINS = [
     "http://localhost:8081",
     "http://localhost:19000",
@@ -51,8 +54,9 @@ if PRODUCTION_URL:
         PRODUCTION_URL.replace("https://", "exp://"),
     ])
 
-# Allow all for development (remove in production)
-if not IS_PRODUCTION:
+# For Hugging Face Spaces or development, allow all origins
+# This is required for Expo mobile app to connect
+if IS_HUGGINGFACE or not IS_PRODUCTION:
     CORS_ORIGINS.append("*")
 
 # Supported languages for OCR

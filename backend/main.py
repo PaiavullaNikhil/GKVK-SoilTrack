@@ -230,6 +230,9 @@ async def get_recommendation(crop_id: str, image_id: str = None):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use port from environment variable or default to 7860 for Hugging Face Spaces
+    port = int(os.getenv("PORT", "7860"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
