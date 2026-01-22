@@ -96,6 +96,12 @@ async def health_check():
     )
 
 
+@app.get("/health")
+async def health():
+    """Simple health check endpoint for monitoring."""
+    return {"status": "ok"}
+
+
 @app.get("/crops", response_model=CropListResponse)
 async def get_crops():
     """Get list of available crops."""
