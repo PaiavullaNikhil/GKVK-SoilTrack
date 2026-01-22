@@ -18,7 +18,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -45,6 +46,14 @@
     "experiments": {
       "typedRoutes": true
     },
-    "scheme": "gkvk-app"
+    "scheme": "gkvk-app",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "1ff1f29b-97b9-41b2-8a31-b6ac7a529872"
+      }
+    }
   }
 }

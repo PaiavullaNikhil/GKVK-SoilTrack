@@ -17,18 +17,43 @@ load_dotenv(dotenv_path=env_path)
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Tesseract path (Windows)
-# Update this path if Tesseract is installed elsewhere
-TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Detect if running in production (cloud platforms)
+IS_PRODUCTION = bool(
+    os.getenv("RAILWAY_ENVIRONMENT") 
+    or os.getenv("RENDER") 
+    or os.getenv("DYNO")  # Heroku
+    or os.getenv("FLY_APP_NAME")  # Fly.io
+    or os.getenv("VERCEL")  # Vercel
+)
+
+# Tesseract path - only for local development
+# In production, use EasyOCR (no Tesseract needed)
+if IS_PRODUCTION:
+    TESSERACT_PATH = None  # EasyOCR will be used automatically
+else:
+    # Local development - Windows path
+    TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # CORS origins
+# Get production URL from environment variable
+PRODUCTION_URL = os.getenv("PRODUCTION_URL", "")
 CORS_ORIGINS = [
     "http://localhost:8081",
     "http://localhost:19000",
     "http://localhost:19006",
     "exp://localhost:8081",
-    "*",  # Allow all for development
 ]
+
+# Add production URL if set
+if PRODUCTION_URL:
+    CORS_ORIGINS.extend([
+        PRODUCTION_URL,
+        PRODUCTION_URL.replace("https://", "exp://"),
+    ])
+
+# Allow all for development (remove in production)
+if not IS_PRODUCTION:
+    CORS_ORIGINS.append("*")
 
 # Supported languages for OCR
 OCR_LANGUAGES = ["en", "kan"]  # English and Kannada
