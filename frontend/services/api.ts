@@ -87,13 +87,45 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
 }
 
 /**
- * Analyze an uploaded image
+ * Analyze an uploaded image (legacy - requires imageId from upload)
  */
 export async function analyzeImage(imageId: string): Promise<AnalysisResponse> {
   const response = await apiClient.post<AnalysisResponse>(
     ENDPOINTS.analyze,
     { image_id: imageId },
     { timeout: 120000 } // 2 minutes for OCR processing
+  );
+
+  return response.data;
+}
+
+/**
+ * Analyze image directly - no file storage, processes immediately
+ * This is the preferred method for Hugging Face Spaces and cloud deployments
+ */
+export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResponse> {
+  const formData = new FormData();
+
+  // Get file name and type from URI
+  const fileName = imageUri.split("/").pop() || "image.jpg";
+  const fileType = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+
+  // Append image to form data
+  formData.append("file", {
+    uri: imageUri,
+    name: fileName,
+    type: fileType,
+  } as unknown as Blob);
+
+  const response = await apiClient.post<AnalysisResponse>(
+    ENDPOINTS.analyzeDirect,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      timeout: 120000, // 2 minutes for OCR processing
+    }
   );
 
   return response.data;

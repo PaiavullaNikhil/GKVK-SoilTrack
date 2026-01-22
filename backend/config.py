@@ -45,6 +45,9 @@ CORS_ORIGINS = [
     "http://localhost:19000",
     "http://localhost:19006",
     "exp://localhost:8081",
+    # Hugging Face Space URL
+    "https://rishven-soiltrack.hf.space",
+    "exp://rishven-soiltrack.hf.space",
 ]
 
 # Add production URL if set

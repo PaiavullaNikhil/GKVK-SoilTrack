@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Speech from "expo-speech";
-import { uploadImage, analyzeImage } from "../services/api";
+import { analyzeImageDirect } from "../services/api";
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -66,16 +66,12 @@ export default function UploadScreen() {
     if (!selectedImage) return;
 
     setIsUploading(true);
+    setIsAnalyzing(true);
     try {
-      const response = await uploadImage(selectedImage);
-      setImageId(response.image_id);
-
-      // Now analyze the image
-      setIsUploading(false);
-      setIsAnalyzing(true);
-
-      const analysis = await analyzeImage(response.image_id);
+      // Direct analysis - no file storage needed (works with Hugging Face Spaces)
+      const analysis = await analyzeImageDirect(selectedImage);
       setAnalysisResult(analysis);
+      setImageId(analysis.image_id);
 
       // Speak result
       Speech.speak("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ", { language: "kn-IN" });
@@ -90,7 +86,7 @@ export default function UploadScreen() {
       }
       Alert.alert(
         "ದೋಷ / Error",
-        `ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಅಥವಾ ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ\nFailed to upload or analyze image\n\n${error.response?.data?.detail || error.message}`,
+        `ಚಿತ್ರವನ್ನು ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ\nFailed to analyze image\n\n${error.response?.data?.detail || error.message || "Network error. Please check if backend is running."}`,
         [{ text: "ಸರಿ / OK" }]
       );
     } finally {

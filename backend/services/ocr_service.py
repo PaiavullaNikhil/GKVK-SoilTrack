@@ -19,14 +19,39 @@ class OCRService:
         self.reader = reader
         print("OCRService initialized!", flush=True)
 
-    def extract_text(self, image_path: str) -> str:
-        """Extract text from soil health card image."""
-        print(f"Processing image: {image_path}", flush=True)
+    def extract_text(self, image_input) -> str:
+        """Extract text from soil health card image.
+        
+        Args:
+            image_input: Can be either:
+                - str: File path to image
+                - bytes: Image bytes data
+                - numpy.ndarray: Image array
+        """
+        print(f"Processing image (type: {type(image_input).__name__})", flush=True)
         
         try:
+            # Convert bytes or numpy array to format EasyOCR can use
+            if isinstance(image_input, bytes):
+                import numpy as np
+                from PIL import Image
+                import io
+                # Convert bytes to PIL Image, then to numpy array
+                image = Image.open(io.BytesIO(image_input))
+                image_array = np.array(image)
+                print("Converted bytes to numpy array", flush=True)
+            elif isinstance(image_input, str):
+                # File path - use directly
+                image_array = image_input
+                print(f"Using file path: {image_input}", flush=True)
+            else:
+                # Assume it's already a numpy array
+                image_array = image_input
+                print("Using provided numpy array", flush=True)
+            
             # First try: Original image (preserves colors for Kannada)
             print("Trying original image...", flush=True)
-            result = self.reader.readtext(image_path, paragraph=False)
+            result = self.reader.readtext(image_array, paragraph=False)
             
             if not result:
                 print("No text detected!", flush=True)
@@ -78,10 +103,14 @@ class OCRService:
             
             full_text = '\n'.join(rows)
             
-            # Save OCR output
-            debug_file = image_path.replace('.jpeg', '_ocr.txt').replace('.jpg', '_ocr.txt')
-            with open(debug_file, 'w', encoding='utf-8') as f:
-                f.write(full_text)
+            # Save OCR output (only if it's a file path, skip for in-memory processing)
+            if isinstance(image_input, str):
+                debug_file = image_input.replace('.jpeg', '_ocr.txt').replace('.jpg', '_ocr.txt')
+                try:
+                    with open(debug_file, 'w', encoding='utf-8') as f:
+                        f.write(full_text)
+                except:
+                    pass  # Skip debug file if can't write
             
             # Check if we got Kannada text
             has_kannada = any(ord(c) >= 0x0C80 and ord(c) <= 0x0CFF for c in full_text)

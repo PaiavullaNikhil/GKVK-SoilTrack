@@ -16,10 +16,16 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },"env": {
+        "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
     }
   },
   "submit": {

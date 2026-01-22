@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "GKVK Soil App",
-    "slug": "gkvk-app",
+    "name": "SoilTrack",
+    "slug": "SoilTrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "icon": "./assets/app-icon.png",
     "splash": {
       "backgroundColor": "#1B5E20"
     },
@@ -14,7 +15,7 @@
       "bundleIdentifier": "com.gkvk.soilapp"
     },
     "android": {
-      "package": "com.gkvk.soilapp",
+      "package": "com.rishven.soiltrack",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -46,13 +47,13 @@
     "experiments": {
       "typedRoutes": true
     },
-    "scheme": "gkvk-app",
+    "scheme": "SoilTrack",
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "1ff1f29b-97b9-41b2-8a31-b6ac7a529872"
+        "projectId": "c6f022f1-fec4-4c21-82f9-02430c6e78bd"
       }
     }
   }

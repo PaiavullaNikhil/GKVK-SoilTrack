@@ -111,7 +111,7 @@ async def get_crops():
 
 @app.post("/upload", response_model=UploadResponse)
 async def upload_image(file: UploadFile = File(...)):
-    """Upload a soil health card image."""
+    """Upload a soil health card image (legacy endpoint - processes immediately now)."""
     log(f"Upload request received: filename={file.filename}, content_type={file.content_type}")
     
     # Validate file type - be lenient with content types from mobile apps
@@ -127,33 +127,132 @@ async def upload_image(file: UploadFile = File(...)):
             detail=f"Invalid file type. Got content_type={file.content_type}, ext={file_ext}. Only JPEG and PNG are allowed.",
         )
 
-    # Generate unique filename - use extension from filename or default to .jpg
-    file_ext = Path(file.filename).suffix if file.filename else ".jpg"
-    if not file_ext:
-        file_ext = ".jpg"
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = UPLOAD_DIR / unique_filename
-
-    log(f"Saving to: {file_path}")
-
-    # Save file
+    # Read image into memory (no file saving)
     try:
         contents = await file.read()
         log(f"Read {len(contents)} bytes from upload")
-        with open(file_path, "wb") as buffer:
-            buffer.write(contents)
-        log(f"File saved successfully: {file_path}")
+        
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Empty file received")
+        
+        # Generate unique ID for response (not used for storage)
+        unique_id = str(uuid.uuid4())
+        
+        log(f"Processing image in memory (no file storage)")
+        
     except Exception as e:
-        log(f"Failed to save file: {e}")
+        log(f"Failed to read file: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
 
     return UploadResponse(
         success=True,
-        image_id=unique_filename,
+        image_id=unique_id,
         message="Image uploaded successfully",
         message_kn="ಚಿತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ",
     )
+
+
+@app.post("/analyze", response_model=AnalysisResponse)
+async def analyze_image(request: AnalysisRequest):
+    """Analyze an uploaded soil health card image (legacy endpoint - uses image_id)."""
+    image_path = UPLOAD_DIR / request.image_id
+
+    if not image_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="Image not found. Please use /analyze-direct endpoint with file upload instead."
+        )
+
+    try:
+        print(f"Analyzing image: {image_path}")
+        
+        # Read file and process
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+        
+        # Perform OCR directly from image bytes
+        ocr_result = ocr_service.extract_text(image_bytes)
+        print(f"OCR result: {len(ocr_result)} chars extracted")
+
+        # Analyze soil data - extract values AND status text from OCR
+        soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
+        print(f"Soil data parsed successfully")
+        print(f"Raw values found: {len(raw_values)}")
+        print(f"Status info (from OCR): {len(status_info)} items")
+
+        # Get nutrient status using OCR-extracted status text
+        nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
+        print(f"Nutrient status count: {len(nutrient_status)}")
+
+        return AnalysisResponse(
+            success=True,
+            image_id=request.image_id,
+            extracted_text=ocr_result,
+            soil_data=soil_data,
+            nutrient_status=nutrient_status,
+            message="Analysis completed",
+            message_kn="ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/analyze-direct", response_model=AnalysisResponse)
+async def analyze_image_direct(file: UploadFile = File(...)):
+    """Analyze a soil health card image directly - no file storage, processes immediately."""
+    log(f"Direct analyze request: filename={file.filename}, content_type={file.content_type}")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/octet-stream"]
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ""
+    allowed_extensions = [".jpg", ".jpeg", ".png"]
+    
+    if file.content_type not in allowed_types and file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Only JPEG and PNG are allowed.",
+        )
+
+    try:
+        # Read image into memory
+        image_bytes = await file.read()
+        log(f"Read {len(image_bytes)} bytes for direct analysis")
+        
+        if len(image_bytes) == 0:
+            raise HTTPException(status_code=400, detail="Empty file received")
+        
+        print(f"Analyzing image directly (size: {len(image_bytes)} bytes)")
+        
+        # Perform OCR directly from image bytes (no file saving)
+        ocr_result = ocr_service.extract_text(image_bytes)
+        print(f"OCR result: {len(ocr_result)} chars extracted")
+
+        # Analyze soil data - extract values AND status text from OCR
+        soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
+        print(f"Soil data parsed successfully")
+        print(f"Raw values found: {len(raw_values)}")
+        print(f"Status info (from OCR): {len(status_info)} items")
+
+        # Get nutrient status using OCR-extracted status text
+        nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
+        print(f"Nutrient status count: {len(nutrient_status)}")
+
+        return AnalysisResponse(
+            success=True,
+            image_id="direct-upload",
+            extracted_text=ocr_result,
+            soil_data=soil_data,
+            nutrient_status=nutrient_status,
+            message="Analysis completed",
+            message_kn="ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
 @app.post("/analyze", response_model=AnalysisResponse)

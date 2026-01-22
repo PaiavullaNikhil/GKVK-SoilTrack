@@ -34,6 +34,7 @@ export const ENDPOINTS = {
   crops: "/crops",
   upload: "/upload",
   analyze: "/analyze",
+  analyzeDirect: "/analyze-direct", // New: Direct analysis without file storage
   recommendation: (cropId: string) => `/recommendation/${cropId}`,
 };
 
