@@ -9,6 +9,7 @@ from pathlib import Path
 import traceback
 import sys
 from datetime import datetime
+from typing import Dict, Tuple
 
 from config import CORS_ORIGINS, UPLOAD_DIR
 
@@ -32,6 +33,7 @@ from models import (
     AnalysisRequest,
     AnalysisResponse,
     RecommendationResponse,
+    SoilData,
 )
 
 app = FastAPI(
@@ -81,6 +83,10 @@ app.add_middleware(
 ocr_service = OCRService()
 analysis_service = AnalysisService()
 recommendation_service = RecommendationService()  # Now has __init__ but it's optional
+
+# In-memory cache to link /analyze-direct results with /recommendation calls
+# Maps image_id -> (soil_data, raw_values, status_info)
+ANALYSIS_CACHE: Dict[str, Tuple[SoilData, dict, dict]] = {}
 
 log("=== SERVER STARTED ===")
 
@@ -240,9 +246,14 @@ async def analyze_image_direct(file: UploadFile = File(...)):
         nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
         print(f"Nutrient status count: {len(nutrient_status)}")
 
+        # Generate a unique image_id and cache the analysis so the recommendation
+        # endpoint can reuse the detailed soil data without needing a saved file
+        image_id = str(uuid.uuid4())
+        ANALYSIS_CACHE[image_id] = (soil_data, raw_values, status_info)
+
         return AnalysisResponse(
             success=True,
-            image_id="direct-upload",
+            image_id=image_id,
             extracted_text=ocr_result,
             soil_data=soil_data,
             nutrient_status=nutrient_status,
@@ -303,13 +314,22 @@ async def get_recommendation(crop_id: str, image_id: str = None):
         soil_data = None
         nutrient_status = None
         if image_id:
-            image_path = UPLOAD_DIR / image_id
-            if image_path.exists():
-                ocr_result = ocr_service.extract_text(str(image_path))
-                # analyze_soil_card returns (soil_data, raw_values, status_info)
-                soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
-                # Get nutrient status with color/status information
-                nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
+            # First, check in-memory cache (results from /analyze-direct)
+            cached = ANALYSIS_CACHE.pop(image_id, None)
+            if cached:
+                soil_data, raw_values, status_info = cached
+                nutrient_status = analysis_service.get_nutrient_status(
+                    soil_data, raw_values, status_info
+                )
+            else:
+                # Fallback to legacy file-based flow if an image was uploaded/saved
+                image_path = UPLOAD_DIR / image_id
+                if image_path.exists():
+                    ocr_result = ocr_service.extract_text(str(image_path))
+                    # analyze_soil_card returns (soil_data, raw_values, status_info)
+                    soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
+                    # Get nutrient status with color/status information
+                    nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
 
         # Get recommendations (now async with Gooey AI)
         recommendations = await recommendation_service.get_recommendations(crop_id, soil_data, nutrient_status)

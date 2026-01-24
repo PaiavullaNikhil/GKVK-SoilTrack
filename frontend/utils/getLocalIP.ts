@@ -85,10 +85,10 @@ export async function getLocalIP(): Promise<string> {
  * In production, uses EXPO_PUBLIC_API_URL if set
  */
 export async function getAPIUrl(): Promise<string> {
-  // Always prefer explicit API URL when provided (works for dev and prod)
+  // In production, prefer explicit API URL when provided
   const productionUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (productionUrl) {
-    console.log("✅ Using configured API URL:", productionUrl);
+  if (productionUrl && !__DEV__) {
+    console.log("✅ Using configured API URL (prod):", productionUrl);
     return productionUrl;
   }
 
@@ -104,10 +104,10 @@ export async function getAPIUrl(): Promise<string> {
 let cachedIP: string | null = null;
 
 export function getAPIUrlSync(): string {
-  // Always prefer explicit API URL when provided (works for dev and prod)
+  // In production, prefer explicit API URL when provided
   const productionUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (productionUrl) {
-    console.log("✅ Using configured API URL (sync):", productionUrl);
+  if (productionUrl && !__DEV__) {
+    console.log("✅ Using configured API URL (sync, prod):", productionUrl);
     return productionUrl;
   }
 
@@ -125,7 +125,7 @@ export function getAPIUrlSync(): string {
 export async function initializeAPIUrl(): Promise<string> {
   // Keep behavior consistent with getAPIUrl/getAPIUrlSync
   const productionUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (productionUrl) {
+  if (productionUrl && !__DEV__) {
     return productionUrl;
   }
 

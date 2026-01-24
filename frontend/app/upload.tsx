@@ -11,14 +11,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Speech from "expo-speech";
 import { analyzeImageDirect } from "../services/api";
 
 export default function UploadScreen() {
   const router = useRouter();
-  const [permission, requestPermission] = useCameraPermissions();
-  const [showCamera, setShowCamera] = useState(false);
+  const [showCamera] = useState(false); // deprecated camera overlay, kept for compatibility
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -95,10 +93,11 @@ export default function UploadScreen() {
 
   const takePhoto = async () => {
     console.log("[UploadScreen] takePhoto pressed");
-    if (!permission?.granted) {
-      console.log("[UploadScreen] Camera permission not granted, requesting...");
-      const result = await requestPermission();
-      if (!result.granted) {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log("[UploadScreen] Camera permission status:", status);
+
+      if (status !== "granted") {
         Alert.alert(
           "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ / Permission Required",
           "ಕ್ಯಾಮೆರಾ ಬಳಸಲು ಅನುಮತಿ ನೀಡಿ\nGrant permission to use camera",
@@ -107,24 +106,36 @@ export default function UploadScreen() {
         console.log("[UploadScreen] Camera permission denied");
         return;
       }
-      console.log("[UploadScreen] Camera permission granted after request");
-    }
-    console.log("[UploadScreen] Showing camera view");
-    setShowCamera(true);
-  };
 
-  const handleCapture = async (camera: any) => {
-    console.log("[UploadScreen] handleCapture called", { hasCamera: !!camera });
-    if (camera) {
-      const photo = await camera.takePictureAsync();
-      console.log("[UploadScreen] Photo captured from camera", {
-        uri: photo.uri,
-        width: photo.width,
-        height: photo.height,
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, // shows OS crop UI
+        quality: 0.8,
       });
-      setSelectedImage(photo.uri);
-      setShowCamera(false);
-      setAnalysisResult(null);
+      console.log("[UploadScreen] Camera result", result);
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        console.log("[UploadScreen] Camera photo selected", {
+          uri: asset.uri,
+          width: asset.width,
+          height: asset.height,
+          fileSize: (asset as any).fileSize,
+        });
+        setSelectedImage(asset.uri);
+        setAnalysisResult(null);
+      } else {
+        console.log("[UploadScreen] Camera canceled or no asset", {
+          canceled: result.canceled,
+        });
+      }
+    } catch (error) {
+      console.error("[UploadScreen] Error in takePhoto:", error);
+      Alert.alert(
+        "ದೋಷ / Error",
+        "ಕ್ಯಾಮೆರಾದಿಂದ ಚಿತ್ರ ಹಿಡಿಯುವಾಗ ದೋಷ ಉಂಟಾಯಿತು\nThere was an error capturing an image from the camera.",
+        [{ text: "ಸರಿ / OK" }]
+      );
     }
   };
 
@@ -177,7 +188,14 @@ export default function UploadScreen() {
   if (showCamera) {
     return (
       <View style={styles.cameraContainer}>
-        <CameraView style={styles.camera} facing="back">
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          ref={(ref) => {
+            // @ts-ignore - CameraView ref typing is loose
+            cameraRef.current = ref;
+          }}
+        >
           <View style={styles.cameraOverlay}>
             <View style={styles.cameraGuide}>
               <View>
@@ -203,12 +221,7 @@ export default function UploadScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.captureButton}
-            onPress={() => {
-              // For simplicity, close camera and pick from gallery
-              // In production, use camera ref for takePictureAsync
-              setShowCamera(false);
-              pickImage();
-            }}
+            onPress={() => handleCapture(cameraRef.current)}
           >
             <View style={styles.captureInner} />
           </TouchableOpacity>
