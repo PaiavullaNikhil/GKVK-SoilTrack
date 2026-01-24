@@ -4,7 +4,6 @@
 
 import axios from "axios";
 import { API_URL, API_TIMEOUT, ENDPOINTS } from "../config/api";
-import { initializeAPIUrl } from "../utils/getLocalIP";
 import type {
   UploadResponse,
   AnalysisResponse,
@@ -13,7 +12,7 @@ import type {
 } from "../types";
 
 // Create axios instance with default config
-// baseURL will be updated when IP is detected
+// baseURL comes from API_URL (see config/api.ts)
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
@@ -22,16 +21,57 @@ const apiClient = axios.create({
   },
 });
 
-// Update baseURL when IP is detected
-initializeAPIUrl().then((url) => {
-  apiClient.defaults.baseURL = url;
-  console.log("✅ API Client updated with auto-detected URL:", url);
-}).catch((error) => {
-  console.warn("⚠️ Failed to update API URL:", error);
-});
-
 // Log the initial API URL for debugging
-console.log("API URL (initial):", API_URL);
+console.log("[API] Initial API URL:", API_URL);
+
+// Global request/response logging for debugging (including production)
+apiClient.interceptors.request.use(
+  (config) => {
+    const method = config.method?.toUpperCase();
+    console.log("[API][Request]", {
+      method,
+      url: `${config.baseURL || ""}${config.url || ""}`,
+      timeout: config.timeout,
+      headers: config.headers,
+      isFormData: config.data instanceof FormData,
+    });
+    return config;
+  },
+  (error) => {
+    console.error("[API][Request][Error]", error);
+    return Promise.reject(error);
+  }
+);
+
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log("[API][Response]", {
+      url: response.config?.url,
+      status: response.status,
+      dataType: typeof response.data,
+    });
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error("[API][Response][Error]", {
+        url: error.response.config?.url,
+        status: error.response.status,
+        data:
+          typeof error.response.data === "string"
+            ? error.response.data
+            : JSON.stringify(error.response.data),
+      });
+    } else if (error.request) {
+      console.error("[API][Response][NoResponse]", {
+        url: error.config?.url,
+      });
+    } else {
+      console.error("[API][Response][SetupError]", error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Check if the API is healthy
@@ -60,6 +100,7 @@ export async function getCrops(): Promise<CropListResponse> {
  * Upload an image to the server
  */
 export async function uploadImage(imageUri: string): Promise<UploadResponse> {
+  console.log("[API] uploadImage called", { imageUri });
   const formData = new FormData();
 
   // Get file name and type from URI
@@ -73,17 +114,25 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
     type: fileType,
   } as unknown as Blob);
 
-  const response = await apiClient.post<UploadResponse>(
-    ENDPOINTS.upload,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-
-  return response.data;
+  try {
+    const response = await apiClient.post<UploadResponse>(
+      ENDPOINTS.upload,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    console.log("[API] uploadImage success", {
+      status: response.status,
+      dataKeys: Object.keys(response.data || {}),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("[API] uploadImage failed", error);
+    throw error;
+  }
 }
 
 /**
@@ -104,6 +153,7 @@ export async function analyzeImage(imageId: string): Promise<AnalysisResponse> {
  * This is the preferred method for Hugging Face Spaces and cloud deployments
  */
 export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResponse> {
+  console.log("[API] analyzeImageDirect called", { imageUri });
   const formData = new FormData();
 
   // Get file name and type from URI
@@ -117,18 +167,26 @@ export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResp
     type: fileType,
   } as unknown as Blob);
 
-  const response = await apiClient.post<AnalysisResponse>(
-    ENDPOINTS.analyzeDirect,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      timeout: 120000, // 2 minutes for OCR processing
-    }
-  );
-
-  return response.data;
+  try {
+    const response = await apiClient.post<AnalysisResponse>(
+      ENDPOINTS.analyzeDirect,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 120000, // 2 minutes for OCR processing
+      }
+    );
+    console.log("[API] analyzeImageDirect success", {
+      status: response.status,
+      dataKeys: Object.keys(response.data || {}),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("[API] analyzeImageDirect failed", error);
+    throw error;
+  }
 }
 
 /**

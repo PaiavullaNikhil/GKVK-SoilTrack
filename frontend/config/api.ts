@@ -7,22 +7,11 @@
  * For production, set EXPO_PUBLIC_API_URL environment variable.
  */
 
-import { getAPIUrlSync, initializeAPIUrl } from "../utils/getLocalIP";
+import { getAPIUrlSync } from "../utils/getLocalIP";
 
-// Initialize with sync version (will use fallback initially)
-// Then update asynchronously when IP is detected
-let API_URL = getAPIUrlSync();
-
-// Initialize IP detection (non-blocking)
-initializeAPIUrl().then((url) => {
-  API_URL = url;
-  console.log("✅ Auto-detected API URL:", API_URL);
-}).catch((error) => {
-  console.warn("⚠️ IP auto-detection failed, using fallback:", error);
-});
-
-// Export the API URL (will be updated when detection completes)
-export { API_URL };
+// Single source of truth for API base URL
+// Prefers EXPO_PUBLIC_API_URL when set (dev + prod), otherwise falls back to local IP
+export const API_URL = getAPIUrlSync();
 
 // API request timeout (in milliseconds)
 // OCR can take 30+ seconds on first run

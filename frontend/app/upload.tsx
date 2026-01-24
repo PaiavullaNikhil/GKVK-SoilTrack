@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -25,21 +25,78 @@ export default function UploadScreen() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [imageId, setImageId] = useState<string | null>(null);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.8,
-    });
+  useEffect(() => {
+    console.log("[UploadScreen] Mounted");
+    return () => {
+      console.log("[UploadScreen] Unmounted");
+    };
+  }, []);
 
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-      setAnalysisResult(null);
+  useEffect(() => {
+    console.log("[UploadScreen] selectedImage changed", { selectedImage });
+  }, [selectedImage]);
+
+  useEffect(() => {
+    console.log("[UploadScreen] analysisResult changed", {
+      hasResult: !!analysisResult,
+      nutrientCount: analysisResult?.nutrient_status?.length,
+      imageId,
+    });
+  }, [analysisResult, imageId]);
+
+  const pickImage = async () => {
+    console.log("[UploadScreen] pickImage called - opening gallery picker");
+    try {
+      // Ensure we have permission to read photos / media
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log("[UploadScreen] Media library permission status:", status);
+
+      if (status !== "granted") {
+        Alert.alert(
+          "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ / Permission Required",
+          "ಗ್ಯಾಲರಿ ಬಳಕೆಗಾಗಿ ಫೋಟೋಗಳಿಗೆ ಪ್ರವೇಶ ಅನುಮತಿಸಿ\nAllow access to photos to use gallery",
+          [{ text: "ಸರಿ / OK" }]
+        );
+        console.log("[UploadScreen] Media library permission denied");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      console.log("[UploadScreen] ImagePicker result", result);
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        console.log("[UploadScreen] Gallery image selected", {
+          uri: asset.uri,
+          width: asset.width,
+          height: asset.height,
+          fileSize: (asset as any).fileSize,
+        });
+        setSelectedImage(asset.uri);
+        setAnalysisResult(null);
+      } else {
+        console.log("[UploadScreen] Gallery picker canceled or no asset", {
+          canceled: result.canceled,
+        });
+      }
+    } catch (error) {
+      console.error("[UploadScreen] Error in pickImage:", error);
+      Alert.alert(
+        "ದೋಷ / Error",
+        "ಗ್ಯಾಲರಿಯಿಂದ ಚಿತ್ರ ಆಯ್ಕೆ ಮಾಡುವಾಗ ದೋಷ ಉಂಟಾಯಿತು\nThere was an error selecting an image from the gallery.",
+        [{ text: "ಸರಿ / OK" }]
+      );
     }
   };
 
   const takePhoto = async () => {
+    console.log("[UploadScreen] takePhoto pressed");
     if (!permission?.granted) {
+      console.log("[UploadScreen] Camera permission not granted, requesting...");
       const result = await requestPermission();
       if (!result.granted) {
         Alert.alert(
@@ -47,15 +104,24 @@ export default function UploadScreen() {
           "ಕ್ಯಾಮೆರಾ ಬಳಸಲು ಅನುಮತಿ ನೀಡಿ\nGrant permission to use camera",
           [{ text: "ಸರಿ / OK" }]
         );
+        console.log("[UploadScreen] Camera permission denied");
         return;
       }
+      console.log("[UploadScreen] Camera permission granted after request");
     }
+    console.log("[UploadScreen] Showing camera view");
     setShowCamera(true);
   };
 
   const handleCapture = async (camera: any) => {
+    console.log("[UploadScreen] handleCapture called", { hasCamera: !!camera });
     if (camera) {
       const photo = await camera.takePictureAsync();
+      console.log("[UploadScreen] Photo captured from camera", {
+        uri: photo.uri,
+        width: photo.width,
+        height: photo.height,
+      });
       setSelectedImage(photo.uri);
       setShowCamera(false);
       setAnalysisResult(null);
@@ -63,20 +129,26 @@ export default function UploadScreen() {
   };
 
   const handleUpload = async () => {
+    console.log("[UploadScreen] handleUpload pressed");
     if (!selectedImage) return;
 
+    console.log("[UploadScreen] Starting upload/analysis", { uri: selectedImage });
     setIsUploading(true);
     setIsAnalyzing(true);
     try {
       // Direct analysis - no file storage needed (works with Hugging Face Spaces)
       const analysis = await analyzeImageDirect(selectedImage);
+      console.log("[UploadScreen] Analysis result received", {
+        imageId: analysis?.image_id,
+        nutrientCount: analysis?.nutrient_status?.length,
+      });
       setAnalysisResult(analysis);
       setImageId(analysis.image_id);
 
       // Speak result
       Speech.speak("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ", { language: "kn-IN" });
     } catch (error: any) {
-      console.error("Upload/Analysis error:", error);
+      console.error("[UploadScreen] Upload/Analysis error:", error);
       // Log detailed error info
       if (error.response) {
         console.error("Response status:", error.response.status);

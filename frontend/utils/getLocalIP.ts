@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 // Fallback IP - automatically updated by detect-ip.js script
 // If auto-detection fails, this will be your current IP
-const FALLBACK_IP = "192.168.1.6";
+const FALLBACK_IP = "192.168.1.4";
 const API_PORT = 8000;
 
 /**
@@ -85,14 +85,14 @@ export async function getLocalIP(): Promise<string> {
  * In production, uses EXPO_PUBLIC_API_URL if set
  */
 export async function getAPIUrl(): Promise<string> {
-  // Production mode: Use environment variable if set
+  // Always prefer explicit API URL when provided (works for dev and prod)
   const productionUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (productionUrl && !__DEV__) {
-    console.log("✅ Using production API URL:", productionUrl);
+  if (productionUrl) {
+    console.log("✅ Using configured API URL:", productionUrl);
     return productionUrl;
   }
-  
-  // Development mode: Auto-detect local IP
+
+  // Fallback: auto-detect local IP (dev only)
   const ip = await getLocalIP();
   return `http://${ip}:${API_PORT}`;
 }
@@ -104,16 +104,16 @@ export async function getAPIUrl(): Promise<string> {
 let cachedIP: string | null = null;
 
 export function getAPIUrlSync(): string {
-  // Production mode: Use environment variable if set
+  // Always prefer explicit API URL when provided (works for dev and prod)
   const productionUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (productionUrl && !__DEV__) {
+  if (productionUrl) {
+    console.log("✅ Using configured API URL (sync):", productionUrl);
     return productionUrl;
   }
-  
+
   if (cachedIP) {
     return `http://${cachedIP}:${API_PORT}`;
   }
-  // Try environment variable first
   const envIP = process.env.EXPO_PUBLIC_API_IP || FALLBACK_IP;
   return `http://${envIP}:${API_PORT}`;
 }
@@ -123,6 +123,12 @@ export function getAPIUrlSync(): string {
  * Call this early in the app lifecycle
  */
 export async function initializeAPIUrl(): Promise<string> {
+  // Keep behavior consistent with getAPIUrl/getAPIUrlSync
+  const productionUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (productionUrl) {
+    return productionUrl;
+  }
+
   const ip = await getLocalIP();
   cachedIP = ip;
   return `http://${ip}:${API_PORT}`;
