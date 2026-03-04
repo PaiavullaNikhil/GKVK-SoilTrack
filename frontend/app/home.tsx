@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import * as Speech from "expo-speech";
+import { useEffect, useState } from "react";
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { checkHealth } from "../services/api";
 
 export default function HomeScreen() {
@@ -19,109 +19,109 @@ export default function HomeScreen() {
 
   const speakWelcome = () => {
     Speech.speak(
-      "ಜಿಕೆವಿಕೆ ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಆಪ್‌ಗೆ ಸುಸ್ವಾಗತ. ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಸ್ಕ್ಯಾನ್ ಮಾಡಲು ಪ್ರಾರಂಭಿಸಿ ಒತ್ತಿರಿ.",
+      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ. ಎರಡು, ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಬೆಳೆ ಆಯ್ಕೆಮಾಡಿ. ಮೂರು, ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ.",
       { language: "kn-IN" }
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-      {/* Logo/Header Section */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>🌱</Text>
+        {/* Logo/Header Section */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={require("../assets/app-icon.png")} style={styles.logoImage} />
+          </View>
+          <Text style={styles.title}>LRI Fertilizer Advisor</Text>
         </View>
-        <Text style={styles.title}>GKVK ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ</Text>
-      </View>
 
-      {/* Connection Status */}
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusDot,
-            {
-              backgroundColor:
-                isConnected === null
-                  ? "#FFC107"
-                  : isConnected
-                  ? "#4CAF50"
-                  : "#F44336",
-            },
-          ]}
-        />
-        <View>
-          <Text style={styles.statusText}>
-            {isConnected === null
-              ? "ಸಂಪರ್ಕಿಸಲಾಗುತ್ತಿದೆ..."
-              : isConnected
-              ? "ಸರ್ವರ್ ಸಂಪರ್ಕಗೊಂಡಿದೆ"
-              : "ಸರ್ವರ್ ಸಂಪರ್ಕವಿಲ್ಲ"}
-          </Text>
-          <Text style={styles.statusTextEn}>
-            {isConnected === null
-              ? "Connecting..."
-              : isConnected
-              ? "Server Connected"
-              : "Server Disconnected"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Main Actions */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => router.push("/upload")}
-        >
-          <Text style={styles.buttonIcon}>📸</Text>
-          <Text style={styles.buttonText}>ಪ್ರಾರಂಭಿಸಿ</Text>
-          <Text style={styles.buttonSubtext}>Start Scanning</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.voiceButton} onPress={speakWelcome}>
-          <Text style={styles.voiceIcon}>🔊</Text>
+        {/* Connection Status */}
+        <View style={styles.statusContainer}>
+          <View
+            style={[
+              styles.statusDot,
+              {
+                backgroundColor:
+                  isConnected === null
+                    ? "#FFC107"
+                    : isConnected
+                      ? "#4CAF50"
+                      : "#F44336",
+              },
+            ]}
+          />
           <View>
-            <Text style={styles.voiceText}>ಕನ್ನಡದಲ್ಲಿ ಕೇಳಿ</Text>
-            <Text style={styles.voiceTextEn}>Listen in Kannada</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Info Section */}
-      <View style={styles.infoContainer}>
-        <View>
-          <Text style={styles.infoTitle}>ಹೇಗೆ ಬಳಸುವುದು?</Text>
-          <Text style={styles.infoTitleEn}>How to Use?</Text>
-        </View>
-        <View style={styles.infoStep}>
-          <Text style={styles.stepNumber}>1</Text>
-          <View style={styles.stepTextContainer}>
-            <Text style={styles.stepText}>
-              ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ
+            <Text style={styles.statusText}>
+              {isConnected === null
+                ? "ಸಂಪರ್ಕಿಸಲಾಗುತ್ತಿದೆ..."
+                : isConnected
+                  ? "ಸರ್ವರ್ ಸಂಪರ್ಕಗೊಂಡಿದೆ"
+                  : "ಸರ್ವರ್ ಸಂಪರ್ಕವಿಲ್ಲ"}
             </Text>
-            <Text style={styles.stepTextEn}>Take photo of soil health card</Text>
+            <Text style={styles.statusTextEn}>
+              {isConnected === null
+                ? "Connecting..."
+                : isConnected
+                  ? "Server Connected"
+                  : "Server Disconnected"}
+            </Text>
           </View>
         </View>
-        <View style={styles.infoStep}>
-          <Text style={styles.stepNumber}>2</Text>
-          <View style={styles.stepTextContainer}>
-            <Text style={styles.stepText}>ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಬೆಳೆ ಆಯ್ಕೆಮಾಡಿ</Text>
-            <Text style={styles.stepTextEn}>Analyze soil and select crop</Text>
+
+        {/* Main Actions */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push("/upload")}
+          >
+            <Text style={styles.buttonIcon}>📸</Text>
+            <Text style={styles.buttonText}>ಪ್ರಾರಂಭಿಸಿ</Text>
+            <Text style={styles.buttonSubtext}>Start Scanning</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.voiceButton} onPress={speakWelcome}>
+            <Text style={styles.voiceIcon}>🔊</Text>
+            <View>
+              <Text style={styles.voiceText}>ಕನ್ನಡದಲ್ಲಿ ಕೇಳಿ</Text>
+              <Text style={styles.voiceTextEn}>Listen in Kannada</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Info Section */}
+        <View style={styles.infoContainer}>
+          <View>
+            <Text style={styles.infoTitle}>ಹೇಗೆ ಬಳಸುವುದು?</Text>
+            <Text style={styles.infoTitleEn}>How to Use?</Text>
+          </View>
+          <View style={styles.infoStep}>
+            <Text style={styles.stepNumber}>1</Text>
+            <View style={styles.stepTextContainer}>
+              <Text style={styles.stepText}>
+                ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ
+              </Text>
+              <Text style={styles.stepTextEn}>Take photo of soil health card</Text>
+            </View>
+          </View>
+          <View style={styles.infoStep}>
+            <Text style={styles.stepNumber}>2</Text>
+            <View style={styles.stepTextContainer}>
+              <Text style={styles.stepText}>ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಬೆಳೆ ಆಯ್ಕೆಮಾಡಿ</Text>
+              <Text style={styles.stepTextEn}>Analyze soil and select crop</Text>
+            </View>
+          </View>
+          <View style={styles.infoStep}>
+            <Text style={styles.stepNumber}>3</Text>
+            <View style={styles.stepTextContainer}>
+              <Text style={styles.stepText}>ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ</Text>
+              <Text style={styles.stepTextEn}>Get fertilizer recommendations</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.infoStep}>
-          <Text style={styles.stepNumber}>3</Text>
-          <View style={styles.stepTextContainer}>
-            <Text style={styles.stepText}>ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ</Text>
-            <Text style={styles.stepTextEn}>Get fertilizer recommendations</Text>
-          </View>
-        </View>
-      </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,8 +154,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  logoText: {
-    fontSize: 35,
+  logoImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    resizeMode: "contain",
   },
   title: {
     fontSize: 24,

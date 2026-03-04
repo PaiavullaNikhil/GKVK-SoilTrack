@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, SafeAreaView, Image } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function LandingScreen() {
@@ -22,13 +22,13 @@ export default function LandingScreen() {
         <View style={styles.content}>
           {/* Logo/Icon */}
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>🌱</Text>
+            <Image source={require("../assets/app-icon.png")} style={styles.logoImage} />
           </View>
 
           {/* Title Section */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>GKVK ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ</Text>
-            <Text style={styles.subtitle}>Soil Health Card Analyzer</Text>
+            <Text style={styles.title}>LRI Fertilizer Advisor</Text>
+            <Text style={styles.subtitle}>Healthy Soil, Happy Harvest! 🌾</Text>
           </View>
 
           {/* Description */}
@@ -90,8 +90,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },
-  logoText: {
-    fontSize: 50,
+  logoImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    resizeMode: "contain",
   },
   titleContainer: {
     alignItems: "center",

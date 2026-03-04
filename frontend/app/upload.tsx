@@ -1,17 +1,17 @@
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import * as Speech from "expo-speech";
 import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import * as Speech from "expo-speech";
 import { analyzeImageDirect } from "../services/api";
 
 export default function UploadScreen() {
@@ -61,7 +61,7 @@ export default function UploadScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
       });
       console.log("[UploadScreen] ImagePicker result", result);
@@ -109,7 +109,7 @@ export default function UploadScreen() {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true, // shows OS crop UI
+        allowsEditing: false, // no crop UI
         quality: 0.8,
       });
       console.log("[UploadScreen] Camera result", result);
@@ -316,7 +316,7 @@ export default function UploadScreen() {
                   <View style={styles.nutrientInfo}>
                     <Text style={styles.nutrientName}>{nutrient.nutrient_kn}</Text>
                     <Text style={styles.nutrientValue}>
-                      {nutrient.value_raw 
+                      {nutrient.value_raw
                         ? `${nutrient.value_raw} ${nutrient.unit}`
                         : nutrient.value !== null
                           ? `${nutrient.value} ${nutrient.unit}`
@@ -340,13 +340,13 @@ export default function UploadScreen() {
               onPress={goToRecommendations}
             >
               <View>
-              <Text style={styles.recommendButtonText}>
-                ಶಿಫಾರಸು ಪಡೆಯಿರಿ →
-              </Text>
-              <Text style={styles.recommendButtonTextEn}>
-                Get Recommendations →
-              </Text>
-            </View>
+                <Text style={styles.recommendButtonText}>
+                  ಶಿಫಾರಸು ಪಡೆಯಿರಿ →
+                </Text>
+                <Text style={styles.recommendButtonTextEn}>
+                  Get Recommendations →
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         )}

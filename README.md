@@ -57,6 +57,9 @@ npx expo install expo-camera expo-image-picker expo-speech expo-router expo-cons
 # Login to Expo
 npx eas login
 
+# Run and Change IPV4 address automatically
+npm start
+
 # Build for Android (development)
 npx eas build -p android --profile development
 

@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 // Fallback IP - automatically updated by detect-ip.js script
 // If auto-detection fails, this will be your current IP
-const FALLBACK_IP = "192.168.1.4";
+const FALLBACK_IP = "192.168.1.2";
 const API_PORT = 8000;
 
 /**
@@ -29,7 +29,7 @@ export async function getLocalIP(): Promise<string> {
       try {
         const Constants = require("expo-constants");
         const manifest = Constants.expoConfig || Constants.manifest;
-        
+
         // Check if we can get IP from Metro bundler URL
         if (manifest?.extra?.serverUrl) {
           const url = new URL(manifest.extra.serverUrl);
@@ -49,13 +49,13 @@ export async function getLocalIP(): Promise<string> {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 500);
-        
+
         const response = await fetch("http://localhost:8000/", {
           method: "GET",
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
-        
+
         // If localhost works, we're on the same machine
         if (response.ok) {
           console.log("✅ Using localhost for web development");
@@ -68,9 +68,7 @@ export async function getLocalIP(): Promise<string> {
 
     // Method 4: Use fallback (automatically updated by detect-ip.js script)
     // This is the most reliable method since the script runs before app starts
-    // Only log if we're in dev mode and the IP seems wrong
-    if (__DEV__ && FALLBACK_IP === "192.168.68.63") {
-      // This is the default, might need updating
+    if (__DEV__) {
       console.log(`ℹ️  Using fallback IP: ${FALLBACK_IP} (auto-updated by detect-ip.js)`);
     }
     return FALLBACK_IP;

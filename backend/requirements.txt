@@ -9,6 +9,10 @@ httpx
 easyocr
 opencv-python
 numpy
+torch
+torchvision
+requests
 
-# Note: torch and torchvision are installed separately in Dockerfile
-# using CPU-only versions for Hugging Face Spaces compatibility
+# Note: For Hugging Face Spaces / Docker, torch & torchvision are installed
+# separately with CPU-only builds (see Dockerfile).
+# For VM deployments, pip will install the default (GPU/CPU) versions above.

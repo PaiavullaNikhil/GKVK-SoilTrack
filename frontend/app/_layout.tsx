@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Text, View, StyleSheet } from "react-native";
 
 // Custom header title component with Kannada and English
 function HeaderTitle({ kannada, english }: { kannada: string; english: string }) {
@@ -56,9 +56,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="home"
           options={{
-            headerTitle: () => (
-              <HeaderTitle kannada="GKVK ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ" english="Soil Health Card Analyzer" />
-            ),
+            headerTitle: "LRI Fertilizer Advisor",
             headerTitleAlign: "center",
           }}
         />

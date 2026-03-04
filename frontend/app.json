@@ -8,11 +8,14 @@
     "newArchEnabled": false,
     "icon": "./assets/app-icon.png",
     "splash": {
-      "backgroundColor": "#1B5E20"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gkvk.soilapp"
+      "bundleIdentifier": "com.gkvk.soilapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.rishven.soiltrack",
