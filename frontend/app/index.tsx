@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, SafeAreaView, Image } from "react-native";
 import { useRouter } from "expo-router";
+import { Image, ImageBackground, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function LandingScreen() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function LandingScreen() {
       >
         {/* Overlay with reduced opacity */}
         <View style={styles.overlay} />
-        
+
         {/* Content */}
         <View style={styles.content}>
           {/* Logo/Icon */}
@@ -34,10 +34,10 @@ export default function LandingScreen() {
           {/* Description */}
           <View style={styles.descriptionContainer}>
             <Text style={styles.description}>
-              ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಬೆಳೆಗೆ ಸೂಕ್ತವಾದ ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ
+              ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಬೆಳೆಗೆ ಸೂಕ್ತವಾದ ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ
             </Text>
             <Text style={styles.descriptionEn}>
-              Scan your soil health card and get personalized fertilizer recommendations for your crops
+              Scan your LRI card and get personalized fertilizer recommendations for your crops
             </Text>
           </View>
 
@@ -67,103 +67,109 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)", // Dark overlay with reduced opacity
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
   },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 30,
-    paddingVertical: 40,
+    paddingVertical: 50,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 55,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 30,
-    elevation: 5,
+    marginBottom: 32,
+    elevation: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    borderWidth: 3,
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
   logoImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    resizeMode: "contain",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   titleContainer: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: 0.5,
     textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 19,
     color: "#E8F5E9",
     textAlign: "center",
     fontWeight: "500",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    letterSpacing: 0.3,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
   descriptionContainer: {
     marginBottom: 50,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    borderRadius: 16,
+    paddingVertical: 20,
   },
   description: {
     fontSize: 16,
     color: "#fff",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 26,
     marginBottom: 12,
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    letterSpacing: 0.2,
   },
   descriptionEn: {
     fontSize: 14,
     color: "#E8F5E9",
     textAlign: "center",
-    lineHeight: 20,
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   getStartedButton: {
     backgroundColor: "#1B5E20",
     borderRadius: 30,
     paddingVertical: 18,
-    paddingHorizontal: 50,
+    paddingHorizontal: 54,
     alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
+    minWidth: 220,
+    elevation: 8,
+    shadowColor: "#1B5E20",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    minWidth: 200,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(165, 214, 167, 0.3)",
   },
   buttonText: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   buttonTextEn: {
     fontSize: 14,
     color: "#A5D6A7",
     fontWeight: "500",
+    letterSpacing: 0.3,
   },
 });

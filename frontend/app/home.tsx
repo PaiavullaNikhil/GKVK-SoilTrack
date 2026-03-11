@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
-import * as Speech from "expo-speech";
 import { useEffect, useState } from "react";
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { checkHealth } from "../services/api";
+import { speakKn } from "../utils/voice";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -18,9 +18,8 @@ export default function HomeScreen() {
   };
 
   const speakWelcome = () => {
-    Speech.speak(
-      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ. ಎರಡು, ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಬೆಳೆ ಆಯ್ಕೆಮಾಡಿ. ಮೂರು, ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ.",
-      { language: "kn-IN" }
+    speakKn(
+      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ. ಎರಡು, ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಫಲಿತಾಂಶ ನೋಡಿ, ನಿಮ್ಮ ಬೆಳೆ ಮತ್ತು ವಯಸ್ಸು ಅಥವಾ ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ. ಮೂರು, ಗೂಂಟೆ ವಿಸ್ತೀರ್ಣ ಅಥವಾ ಸಸ್ಯಗಳ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಗೊಬ್ಬರ ಸಂಯೋಜನೆ ನೋಡಿ."
     );
   };
 
@@ -36,7 +35,6 @@ export default function HomeScreen() {
           <View style={styles.logoContainer}>
             <Image source={require("../assets/app-icon.png")} style={styles.logoImage} />
           </View>
-          <Text style={styles.title}>LRI Fertilizer Advisor</Text>
         </View>
 
         {/* Connection Status */}
@@ -102,23 +100,31 @@ export default function HomeScreen() {
             <Text style={styles.stepNumber}>1</Text>
             <View style={styles.stepTextContainer}>
               <Text style={styles.stepText}>
-                ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ
+                ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ
               </Text>
-              <Text style={styles.stepTextEn}>Take photo of soil health card</Text>
+              <Text style={styles.stepTextEn}>Take or choose LRI card photo</Text>
             </View>
           </View>
           <View style={styles.infoStep}>
             <Text style={styles.stepNumber}>2</Text>
             <View style={styles.stepTextContainer}>
-              <Text style={styles.stepText}>ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಬೆಳೆ ಆಯ್ಕೆಮಾಡಿ</Text>
-              <Text style={styles.stepTextEn}>Analyze soil and select crop</Text>
+              <Text style={styles.stepText}>
+                ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಫಲಿತಾಂಶ ನೋಡಿ, ಬೆಳೆ ಮತ್ತು ವಯಸ್ಸು / ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ
+              </Text>
+              <Text style={styles.stepTextEn}>
+                Check soil analysis and select crop & age / variety
+              </Text>
             </View>
           </View>
           <View style={styles.infoStep}>
             <Text style={styles.stepNumber}>3</Text>
             <View style={styles.stepTextContainer}>
-              <Text style={styles.stepText}>ಗೊಬ್ಬರ ಶಿಫಾರಸು ಪಡೆಯಿರಿ</Text>
-              <Text style={styles.stepTextEn}>Get fertilizer recommendations</Text>
+              <Text style={styles.stepText}>
+                ಗೂಂಟೆ ವಿಸ್ತೀರ್ಣ ಅಥವಾ ಸಸ್ಯಗಳ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಗೊಬ್ಬರ ಮಿಶ್ರಣ ನೋಡಿ
+              </Text>
+              <Text style={styles.stepTextEn}>
+                Select land area (guntas) or plant count and view fertilizer mix
+              </Text>
             </View>
           </View>
         </View>
@@ -137,13 +143,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   header: {
     alignItems: "center",
     marginTop: 10,
-    marginBottom: 15,
+    marginBottom: 14,
   },
   logoContainer: {
     width: 70,
@@ -155,13 +161,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   logoImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    resizeMode: "contain",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#1B5E20",
     textAlign: "center",
@@ -175,13 +180,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 15,
+    marginBottom: 16,
+    backgroundColor: "#fff",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignSelf: "center",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 8,
+    marginRight: 10,
   },
   statusText: {
     fontSize: 14,
@@ -195,19 +210,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   actionsContainer: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   primaryButton: {
     backgroundColor: "#1B5E20",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 18,
     alignItems: "center",
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: "#1B5E20",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   secondaryButton: {
     backgroundColor: "#fff",
@@ -267,12 +282,12 @@ const styles = StyleSheet.create({
   infoContainer: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 15,
-    elevation: 2,
+    padding: 16,
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   infoTitle: {
     fontSize: 16,
@@ -284,25 +299,26 @@ const styles = StyleSheet.create({
   infoTitleEn: {
     fontSize: 12,
     color: "#666",
-    marginBottom: 12,
+    marginBottom: 14,
     textAlign: "center",
   },
   infoStep: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   stepNumber: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     backgroundColor: "#1B5E20",
-    borderRadius: 12,
+    borderRadius: 13,
     color: "#fff",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 26,
     fontSize: 12,
     fontWeight: "bold",
-    marginRight: 10,
+    marginRight: 12,
+    overflow: "hidden",
   },
   stepTextContainer: {
     flex: 1,
@@ -313,7 +329,7 @@ const styles = StyleSheet.create({
   },
   stepTextEn: {
     fontSize: 12,
-    color: "#666",
+    color: "#888",
     marginTop: 2,
   },
 });

@@ -31,16 +31,21 @@ class AnalysisService:
 
     # Status keywords in Kannada and their colors
     STATUS_MAP = {
+        # Soil reaction / salinity etc.
         "ಅಧಿಕ ಆಮ್ಲೀಯ": ("#F97316", "Highly Acidic"),
         "ಆಮ್ಲೀಯ": ("#F97316", "Acidic"),
         "ಲವಣ ರಹಿತ": ("#10B981", "Salt Free"),
-        "ಸಾಕಷ್ಟು": ("#10B981", "Sufficient"),
-        "ಮಧ್ಯಮ": ("#F59E0B", "Medium"),
-        "ಕಡಿಮೆ": ("#EF4444", "Low"),
-        "ಹೆಚ್ಚು": ("#10B981", "High"),
         "ಸಾಮಾನ್ಯ": ("#10B981", "Normal"),
         "ತಟಸ್ಥ": ("#10B981", "Neutral"),
         "ಕ್ಷಾರೀಯ": ("#F59E0B", "Alkaline"),
+        # Fertility / nutrient levels (5-class scale)
+        "ಅತಿ ಕಡಿಮೆ": ("#B91C1C", "Very Low"),
+        "ಕಡಿಮೆ": ("#EF4444", "Low"),
+        "ಮಧ್ಯಮ": ("#F59E0B", "Medium"),
+        "ಹೆಚ್ಚು": ("#10B981", "High"),
+        "ಅತಿ ಹೆಚ್ಚು": ("#16A34A", "Very High"),
+        # Generic sufficient
+        "ಸಾಕಷ್ಟು": ("#10B981", "Sufficient"),
     }
 
     NUTRIENT_KN = {

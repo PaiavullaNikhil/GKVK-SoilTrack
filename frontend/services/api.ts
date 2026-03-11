@@ -154,39 +154,60 @@ export async function analyzeImage(imageId: string): Promise<AnalysisResponse> {
  */
 export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResponse> {
   console.log("[API] analyzeImageDirect called", { imageUri });
-  const formData = new FormData();
 
-  // Get file name and type from URI
-  const fileName = imageUri.split("/").pop() || "image.jpg";
-  const fileType = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+  // Helper to build a fresh FormData for each attempt
+  const buildFormData = () => {
+    const fd = new FormData();
+    const fileName = imageUri.split("/").pop() || "image.jpg";
+    const fileType = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+    fd.append("file", {
+      uri: imageUri,
+      name: fileName,
+      type: fileType,
+    } as unknown as Blob);
+    return fd;
+  };
 
-  // Append image to form data
-  formData.append("file", {
-    uri: imageUri,
-    name: fileName,
-    type: fileType,
-  } as unknown as Blob);
+  const MAX_RETRIES = 2; // total attempts = 2 (initial + 1 retry)
 
-  try {
-    const response = await apiClient.post<AnalysisResponse>(
-      ENDPOINTS.analyzeDirect,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 120000, // 2 minutes for OCR processing
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[API] analyzeImageDirect attempt ${attempt}/${MAX_RETRIES}`);
+      const response = await apiClient.post<AnalysisResponse>(
+        ENDPOINTS.analyzeDirect,
+        buildFormData(),
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 120000, // 2 minutes for OCR processing
+        }
+      );
+      console.log("[API] analyzeImageDirect success", {
+        status: response.status,
+        dataKeys: Object.keys(response.data || {}),
+      });
+      return response.data;
+    } catch (error: any) {
+      const isNetworkError = !error.response && !!error.request;
+      console.error(
+        `[API] analyzeImageDirect attempt ${attempt} failed`,
+        isNetworkError ? "(network error — no response)" : "(server error)"
+      );
+
+      // Only retry on network errors (no response received), not on server errors
+      if (isNetworkError && attempt < MAX_RETRIES) {
+        console.log("[API] Retrying in 1 second...");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
       }
-    );
-    console.log("[API] analyzeImageDirect success", {
-      status: response.status,
-      dataKeys: Object.keys(response.data || {}),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("[API] analyzeImageDirect failed", error);
-    throw error;
+
+      throw error;
+    }
   }
+
+  // Should never reach here, but TypeScript needs it
+  throw new Error("analyzeImageDirect: unexpected end of retry loop");
 }
 
 /**

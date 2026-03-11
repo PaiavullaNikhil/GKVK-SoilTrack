@@ -4,15 +4,6 @@ python-multipart
 pillow
 pydantic
 python-dotenv
-google-generativeai
-httpx
 easyocr
 opencv-python
 numpy
-torch
-torchvision
-requests
-
-# Note: For Hugging Face Spaces / Docker, torch & torchvision are installed
-# separately with CPU-only builds (see Dockerfile).
-# For VM deployments, pip will install the default (GPU/CPU) versions above.

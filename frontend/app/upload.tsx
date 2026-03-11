@@ -1,6 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import * as Speech from "expo-speech";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,18 +12,26 @@ import {
   View,
 } from "react-native";
 import { analyzeImageDirect } from "../services/api";
+import { speakKn } from "../utils/voice";
 
 export default function UploadScreen() {
   const router = useRouter();
-  const [showCamera] = useState(false); // deprecated camera overlay, kept for compatibility
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [imageId, setImageId] = useState<string | null>(null);
+  const [npkStatus, setNpkStatus] = useState<{
+    N: "very_low" | "low" | "medium" | "high" | "very_high";
+    P: "very_low" | "low" | "medium" | "high" | "very_high";
+    K: "very_low" | "low" | "medium" | "high" | "very_high";
+  } | null>(null);
 
   useEffect(() => {
     console.log("[UploadScreen] Mounted");
+    speakKn(
+      "ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ ಕಾರ್ಡ್‌ನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ."
+    );
     return () => {
       console.log("[UploadScreen] Unmounted");
     };
@@ -156,8 +163,40 @@ export default function UploadScreen() {
       setAnalysisResult(analysis);
       setImageId(analysis.image_id);
 
-      // Speak result
-      Speech.speak("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ", { language: "kn-IN" });
+      // Derive N, P, K fertility classes from OCR status
+      const baseStatus: {
+        N: "very_low" | "low" | "medium" | "high" | "very_high";
+        P: "very_low" | "low" | "medium" | "high" | "very_high";
+        K: "very_low" | "low" | "medium" | "high" | "very_high";
+      } = { N: "medium", P: "medium", K: "medium" };
+      (analysis.nutrient_status || []).forEach((nutrient: any) => {
+        const name = (nutrient.nutrient || "").toLowerCase();
+        const statusKn: string = nutrient.status_kn || "";
+        const level:
+          | "very_low"
+          | "low"
+          | "medium"
+          | "high"
+          | "very_high" = statusKn.includes("ಅತಿ ಕಡಿಮೆ")
+            ? "very_low"
+            : statusKn.includes("ಕಡಿಮೆ")
+              ? "low"
+              : statusKn.includes("ಮಧ್ಯಮ")
+                ? "medium"
+                : statusKn.includes("ಅತಿ ಹೆಚ್ಚು")
+                  ? "very_high"
+                  : statusKn.includes("ಹೆಚ್ಚು")
+                    ? "high"
+                    : "medium";
+
+        if (name.includes("nitrogen")) baseStatus.N = level;
+        if (name.includes("phosphorus")) baseStatus.P = level;
+        if (name.includes("potassium")) baseStatus.K = level;
+      });
+      setNpkStatus(baseStatus);
+
+      // Speak result hint
+      speakKn("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ.");
     } catch (error: any) {
       console.error("[UploadScreen] Upload/Analysis error:", error);
       // Log detailed error info
@@ -181,71 +220,36 @@ export default function UploadScreen() {
   const goToRecommendations = () => {
     router.push({
       pathname: "/crops",
-      params: { imageId: imageId || "" },
+      params: {
+        imageId: imageId || "",
+        npk: npkStatus ? JSON.stringify(npkStatus) : "",
+      },
     });
   };
 
-  if (showCamera) {
-    return (
-      <View style={styles.cameraContainer}>
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          ref={(ref) => {
-            // @ts-ignore - CameraView ref typing is loose
-            cameraRef.current = ref;
-          }}
-        >
-          <View style={styles.cameraOverlay}>
-            <View style={styles.cameraGuide}>
-              <View>
-                <Text style={styles.cameraGuideText}>
-                  ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಇಲ್ಲಿ ಹಿಡಿಯಿರಿ
-                </Text>
-                <Text style={styles.cameraGuideTextEn}>
-                  Position soil health card here
-                </Text>
-              </View>
-            </View>
-          </View>
-        </CameraView>
-        <View style={styles.cameraControls}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowCamera(false)}
-          >
-            <View>
-              <Text style={styles.cancelButtonText}>ರದ್ದುಮಾಡಿ</Text>
-              <Text style={styles.cancelButtonTextEn}>Cancel</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.captureButton}
-            onPress={() => handleCapture(cameraRef.current)}
-          >
-            <View style={styles.captureInner} />
-          </TouchableOpacity>
-          <View style={{ width: 70 }} />
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Image Preview */}
         <View style={styles.previewContainer}>
           {selectedImage ? (
-            <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
           ) : (
             <View style={styles.placeholder}>
               <Text style={styles.placeholderIcon}>📄</Text>
               <Text style={styles.placeholderText}>
-                ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಆಯ್ಕೆಮಾಡಿ
+                ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಆಯ್ಕೆಮಾಡಿ
               </Text>
               <Text style={styles.placeholderSubtext}>
-                Select Soil Health Card
+                Select LRI Card
               </Text>
             </View>
           )}
@@ -334,24 +338,24 @@ export default function UploadScreen() {
                 </View>
               )
             )}
-
-            <TouchableOpacity
-              style={styles.recommendButton}
-              onPress={goToRecommendations}
-            >
-              <View>
-                <Text style={styles.recommendButtonText}>
-                  ಶಿಫಾರಸು ಪಡೆಯಿರಿ →
-                </Text>
-                <Text style={styles.recommendButtonTextEn}>
-                  Get Recommendations →
-                </Text>
-              </View>
-            </TouchableOpacity>
           </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+
+      {analysisResult && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.recommendButton}
+            onPress={goToRecommendations}
+          >
+            <View>
+              <Text style={styles.recommendButtonText}>ಮುಂದೆ →</Text>
+              <Text style={styles.recommendButtonTextEn}>Next →</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -360,94 +364,110 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F5F5",
   },
-  content: {
-    padding: 20,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
   },
   previewContainer: {
     backgroundColor: "#fff",
-    borderRadius: 15,
+    borderRadius: 14,
     overflow: "hidden",
-    marginBottom: 20,
-    elevation: 3,
+    marginBottom: 16,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   previewImage: {
     width: "100%",
     height: 300,
-    resizeMode: "contain",
   },
   placeholder: {
-    height: 250,
+    height: 240,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#E8F5E9",
+    margin: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#A5D6A7",
+    borderStyle: "dashed",
   },
   placeholderIcon: {
-    fontSize: 60,
-    marginBottom: 15,
+    fontSize: 50,
+    marginBottom: 12,
+    opacity: 0.6,
   },
   placeholderText: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#1B5E20",
     fontWeight: "500",
   },
   placeholderSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-    marginTop: 5,
+    marginTop: 4,
   },
   buttonsRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
   actionButton: {
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     alignItems: "center",
-    width: "45%",
-    elevation: 2,
+    width: "47%",
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
   },
   actionIcon: {
     fontSize: 32,
     marginBottom: 8,
   },
   actionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#333",
     fontWeight: "500",
   },
   actionTextEn: {
     fontSize: 12,
-    color: "#666",
+    color: "#888",
     marginTop: 2,
   },
   uploadButton: {
     backgroundColor: "#1B5E20",
-    borderRadius: 15,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   uploadButtonDisabled: {
     backgroundColor: "#81C784",
+    elevation: 1,
+    shadowOpacity: 0.1,
   },
   uploadIcon: {
-    fontSize: 24,
+    fontSize: 22,
     marginRight: 10,
   },
   uploadButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     color: "#fff",
     fontWeight: "bold",
     textAlign: "center",
@@ -460,25 +480,32 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    elevation: 3,
+    borderRadius: 14,
+    padding: 18,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    marginBottom: 8,
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+    backgroundColor: "#F5F5F5",
   },
   resultsTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#1B5E20",
     marginBottom: 4,
     textAlign: "center",
   },
   resultsSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-    marginBottom: 15,
+    marginBottom: 14,
     textAlign: "center",
   },
   nutrientRow: {
@@ -487,41 +514,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#F0F0F0",
   },
   nutrientInfo: {
     flex: 1,
   },
   nutrientName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
     color: "#333",
   },
   nutrientValue: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 13,
+    color: "#888",
     marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   statusText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
   },
   recommendButton: {
     backgroundColor: "#1B5E20",
-    borderRadius: 10,
-    padding: 15,
-    marginTop: 20,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
     alignItems: "center",
+    elevation: 2,
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   recommendButtonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "bold",
     textAlign: "center",
   },

@@ -18,14 +18,16 @@ const headerStyles = StyleSheet.create({
     alignItems: "center",
   },
   kannada: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "bold",
     color: "#fff",
+    letterSpacing: 0.3,
   },
   english: {
     fontSize: 11,
     color: "#A5D6A7",
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: 0.5,
   },
 });
 
@@ -45,6 +47,7 @@ export default function RootLayout() {
           contentStyle: {
             backgroundColor: "#F5F5F5",
           },
+          headerShadowVisible: true,
         }}
       >
         <Stack.Screen
@@ -83,6 +86,33 @@ export default function RootLayout() {
           options={{
             headerTitle: () => (
               <HeaderTitle kannada="ಶಿಫಾರಸುಗಳು" english="Recommendations" />
+            ),
+            headerTitleAlign: "center",
+          }}
+        />
+        <Stack.Screen
+          name="area"
+          options={{
+            headerTitle: () => (
+              <HeaderTitle kannada="ಭೂಮಿ ವಿಸ್ತೀರ್ಣ" english="Land Area" />
+            ),
+            headerTitleAlign: "center",
+          }}
+        />
+        <Stack.Screen
+          name="fertilizers"
+          options={{
+            headerTitle: () => (
+              <HeaderTitle kannada="ಗೊಬ್ಬರ ಸಂಯೋಜನೆ" english="Fertilizer Mix" />
+            ),
+            headerTitleAlign: "center",
+          }}
+        />
+        <Stack.Screen
+          name="plants"
+          options={{
+            headerTitle: () => (
+              <HeaderTitle kannada="ಸಸ್ಯಗಳ ಸಂಖ್ಯೆ" english="Plant Count" />
             ),
             headerTitleAlign: "center",
           }}

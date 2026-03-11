@@ -1,196 +1,126 @@
-import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import * as Speech from "expo-speech";
-import { getRecommendations } from "../services/api";
-import type { Recommendation } from "../types";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ALL_CROPS, type CategorizedCrop } from "./crops";
 
 export default function RecommendationScreen() {
   const router = useRouter();
-  const { cropId, imageId } = useLocalSearchParams<{
+  const { cropId, imageId, npk } = useLocalSearchParams<{
     cropId: string;
     imageId?: string;
+    npk?: string;
   }>();
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [unit, setUnit] = useState<"acre" | "hectare">("acre");
 
-  useEffect(() => {
-    loadRecommendations();
-  }, [cropId, imageId]);
+  type NpkLevel = "very_low" | "low" | "medium" | "high" | "very_high";
+  type NpkStatusMap = { N: NpkLevel; P: NpkLevel; K: NpkLevel };
 
-  const loadRecommendations = async () => {
+  const parsedNpkStatus: NpkStatusMap | null = useMemo(() => {
+    if (!npk) return null;
     try {
-      const response = await getRecommendations(cropId, imageId);
-      setRecommendations(response.recommendations);
-    } catch (error) {
-      console.error("Failed to load recommendations:", error);
-      // Use fallback recommendations
-      setRecommendations([
-        {
-          title: "Soil Testing",
-          title_kn: "ಮಣ್ಣು ಪರೀಕ್ಷೆ",
-          description:
-            "Get your soil tested every 2-3 years for accurate fertilizer recommendations",
-          description_kn:
-            "ನಿಖರವಾದ ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳಿಗಾಗಿ ಪ್ರತಿ 2-3 ವರ್ಷಗಳಿಗೊಮ್ಮೆ ನಿಮ್ಮ ಮಣ್ಣನ್ನು ಪರೀಕ್ಷಿಸಿ",
-          fertilizer: null,
-          fertilizer_kn: null,
-          dosage: null,
-          dosage_kn: null,
-        },
-      ]);
-    } finally {
-      setLoading(false);
+      const obj = JSON.parse(npk);
+      if (obj && typeof obj === "object" && obj.N && obj.P && obj.K) {
+        return obj as NpkStatusMap;
+      }
+    } catch {
+      // ignore parse errors
     }
-  };
+    return null;
+  }, [npk]);
 
-  const speakRecommendation = (rec: Recommendation) => {
-    if (isSpeaking) {
-      Speech.stop();
-      setIsSpeaking(false);
-      return;
-    }
+  const cropMeta: CategorizedCrop | undefined = useMemo(
+    () => ALL_CROPS.find((c) => c.id === cropId),
+    [cropId]
+  );
 
-    const text = `${rec.title_kn}. ${rec.description_kn}. ${
-      rec.fertilizer_kn ? `ಗೊಬ್ಬರ: ${rec.fertilizer_kn}.` : ""
-    } ${rec.dosage_kn ? `ಪ್ರಮಾಣ: ${rec.dosage_kn}` : ""}`;
+  const adjustedRdf = useMemo(() => {
+    if (!cropMeta || !cropMeta.cerealsFertility) return null;
 
-    setIsSpeaking(true);
-    Speech.speak(text, {
-      language: "kn-IN",
-      onDone: () => setIsSpeaking(false),
-      onStopped: () => setIsSpeaking(false),
-    });
-  };
+    const fert = cropMeta.cerealsFertility;
+    const levels: NpkLevel[] = ["very_low", "low", "medium", "high", "very_high"];
 
-  const speakAll = () => {
-    if (isSpeaking) {
-      Speech.stop();
-      setIsSpeaking(false);
-      return;
-    }
+    const scale = (valuePerHa: number) =>
+      unit === "hectare" ? valuePerHa : parseFloat((valuePerHa * 0.4047).toFixed(2));
 
-    const allText = recommendations
-      .map(
-        (rec, index) =>
-          `ಶಿಫಾರಸು ${index + 1}: ${rec.title_kn}. ${rec.description_kn}`
-      )
-      .join(". ");
+    const perNutrient = (nutrient: "N" | "P" | "K") => {
+      const base = {
+        very_low: fert.soilClasses[nutrient].very_low,
+        low: fert.soilClasses[nutrient].low,
+        medium: fert.rdf.perHa[nutrient],
+        high: fert.soilClasses[nutrient].high,
+        very_high: fert.soilClasses[nutrient].very_high,
+      };
+      const scaled: Record<NpkLevel, number> = {} as Record<NpkLevel, number>;
+      levels.forEach((lvl) => {
+        scaled[lvl] = scale(base[lvl]);
+      });
+      return scaled;
+    };
 
-    setIsSpeaking(true);
-    Speech.speak(allText, {
-      language: "kn-IN",
-      onDone: () => setIsSpeaking(false),
-      onStopped: () => setIsSpeaking(false),
-    });
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1B5E20" />
-        <Text style={styles.loadingText}>ಶಿಫಾರಸುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...</Text>
-      </View>
-    );
-  }
+    return {
+      N: perNutrient("N"),
+      P: perNutrient("P"),
+      K: perNutrient("K"),
+      selected: parsedNpkStatus || null,
+    };
+  }, [parsedNpkStatus, cropMeta, unit]);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳು</Text>
-          <Text style={styles.subtitle}>Fertilizer Recommendations</Text>
-
-          <TouchableOpacity style={styles.speakAllButton} onPress={speakAll}>
-            <Text style={styles.speakIcon}>{isSpeaking ? "⏹️" : "🔊"}</Text>
-            <Text style={styles.speakAllText}>
-              {isSpeaking ? "ನಿಲ್ಲಿಸಿ" : "ಎಲ್ಲವನ್ನೂ ಕೇಳಿ"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recommendations */}
-        {recommendations.map((rec, index) => (
-          <View key={index} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.numberBadge}>
-                <Text style={styles.numberText}>{index + 1}</Text>
+        {/* Adjusted RDF summary for N, P, K */}
+        {adjustedRdf && (
+          <View style={styles.rdfCard}>
+            <View style={styles.rdfHeaderRow}>
+              <View>
+                <Text style={styles.rdfTitle}>ಹೊಂದಿಕೊಳ್ಳಲಾದ ಗೊಬ್ಬರ ಪ್ರಮಾಣ (NPK)</Text>
+                <Text style={styles.rdfSubtitle}>
+                  Adjusted RDF for 40 guntas (1 acre)
+                </Text>
               </View>
-              <View style={styles.cardTitles}>
-                <Text style={styles.cardTitle}>{rec.title_kn}</Text>
-                <Text style={styles.cardTitleEn}>{rec.title}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.speakButton}
-                onPress={() => speakRecommendation(rec)}
-              >
-                <Text style={styles.speakButtonIcon}>🔊</Text>
-              </TouchableOpacity>
             </View>
 
-            <Text style={styles.description}>{rec.description_kn}</Text>
-            <Text style={styles.descriptionEn}>{rec.description}</Text>
+            {/* Show only the selected value for each nutrient */}
+            {(["N", "P", "K"] as const).map((nutrientKey) => {
+              const row = adjustedRdf[nutrientKey];
+              const selectedLevel = adjustedRdf.selected?.[nutrientKey] || "medium";
+              const labels: Record<NpkLevel, string> = {
+                very_low: "Very low",
+                low: "Low",
+                medium: "Medium",
+                high: "High",
+                very_high: "Very high",
+              };
 
-            {(rec.fertilizer || rec.dosage) && (
-              <View style={styles.detailsContainer}>
-                {rec.fertilizer && (
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailLabelContainer}>
-                      <Text style={styles.detailLabel}>ಗೊಬ್ಬರ:</Text>
-                      <Text style={styles.detailLabelEn}>Fertilizer:</Text>
-                    </View>
-                    <View style={styles.detailValueContainer}>
-                      <Text style={styles.detailValue} numberOfLines={0}>{rec.fertilizer_kn}</Text>
-                      {rec.fertilizer && rec.fertilizer !== rec.fertilizer_kn && (
-                        <Text style={styles.detailValueEn} numberOfLines={0}>{rec.fertilizer}</Text>
-                      )}
-                    </View>
-                  </View>
-                )}
-                {rec.dosage && (
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailLabelContainer}>
-                      <Text style={styles.detailLabel}>ಪ್ರಮಾಣ:</Text>
-                      <Text style={styles.detailLabelEn}>Dosage:</Text>
-                    </View>
-                    <View style={styles.detailValueContainer}>
-                      <Text style={styles.detailValue} numberOfLines={0}>{rec.dosage_kn}</Text>
-                      {rec.dosage && rec.dosage !== rec.dosage_kn && (
-                        <Text style={styles.detailValueEn} numberOfLines={0}>{rec.dosage}</Text>
-                      )}
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
+              return (
+                <View key={nutrientKey} style={styles.rdfRow}>
+                  <Text style={styles.rdfCellLabel}>{nutrientKey}</Text>
+                  <Text style={styles.rdfCellValue}>
+                    {labels[selectedLevel]} – {row[selectedLevel]} kg
+                  </Text>
+                </View>
+              );
+            })}
           </View>
-        ))}
+        )}
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity
-            style={styles.newScanButton}
-            onPress={() => router.push("/upload")}
-          >
-            <Text style={styles.newScanIcon}>📸</Text>
-            <Text style={styles.newScanText}>ಹೊಸ ಸ್ಕ್ಯಾನ್</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={styles.homeButton}
-            onPress={() => router.push("/home")}
+            onPress={() =>
+              router.push({
+                pathname: "/area",
+                params: {
+                  cropId,
+                  npk: npk || "",
+                },
+              })
+            }
           >
-            <Text style={styles.homeIcon}>🏠</Text>
-            <Text style={styles.homeText}>ಮುಖಪುಟ</Text>
+            <Text style={styles.homeIcon}>📏</Text>
+            <Text style={styles.homeText}>ವಿಸ್ತೀರ್ಣಕ್ಕೆ ಲೆಕ್ಕಿಸಿ</Text>
+            <Text style={styles.homeTextEn}>Calculate for land area</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -222,10 +152,97 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  rdfCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 18,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#1B5E20",
+  },
+  rdfHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  rdfTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1B5E20",
+    letterSpacing: 0.2,
+  },
+  rdfSubtitle: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 3,
+  },
+  unitToggle: {
+    flexDirection: "row",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#C8E6C9",
+    overflow: "hidden",
+  },
+  unitButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#fff",
+  },
+  unitButtonActive: {
+    backgroundColor: "#1B5E20",
+  },
+  unitButtonText: {
+    fontSize: 12,
+    color: "#1B5E20",
+  },
+  unitButtonTextActive: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  rdfTableHeader: {
+    flexDirection: "row",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#E0E0E0",
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  rdfRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F5F5F5",
+  },
+  rdfCellHeading: {
+    fontWeight: "600",
+    color: "#555",
+  },
+  rdfCellLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "600",
+  },
+  rdfCellValue: {
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+    textAlign: "right",
+  },
+  rdfCellValueSelected: {
+    fontWeight: "700",
+    color: "#1B5E20",
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#1B5E20",
+    letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 14,
@@ -252,14 +269,14 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 15,
+    borderRadius: 18,
     padding: 20,
     marginBottom: 15,
-    elevation: 3,
+    elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   cardHeader: {
     flexDirection: "row",
@@ -312,7 +329,7 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     backgroundColor: "#F5F5F5",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 15,
     marginTop: 15,
   },
@@ -354,49 +371,40 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  newScanButton: {
-    flex: 1,
-    backgroundColor: "#1B5E20",
-    borderRadius: 15,
-    padding: 15,
-    flexDirection: "column",
-    alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
-  },
-  newScanIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  newScanText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
+    marginTop: 12,
   },
   homeButton: {
-    flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 16,
+    padding: 16,
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#1B5E20",
-    marginLeft: 10,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    minWidth: 200,
   },
   homeIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 22,
+    marginBottom: 6,
   },
   homeText: {
     color: "#1B5E20",
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    letterSpacing: 0.2,
+  },
+  homeTextEn: {
+    color: "#1B5E20",
+    fontSize: 12,
+    marginTop: 3,
     textAlign: "center",
   },
 });

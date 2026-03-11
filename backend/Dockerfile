@@ -16,10 +16,7 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 
-# Install CPU-only PyTorch first (lighter and faster)
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision
-
-# Install remaining dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
@@ -38,9 +35,13 @@ USER hf_user
 # Expose port 7860 (required by Hugging Face Spaces)
 EXPOSE 7860
 
-# Health check
+# Health check (uses Python stdlib only)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:7860/health')" || exit 1
+  CMD python -c "import urllib.request, urllib.error; import sys; \
+import time; \
+url = 'http://localhost:7860/health'; \
+req = urllib.request.Request(url); \
+try:\n    urllib.request.urlopen(req, timeout=5)\nexcept Exception:\n    sys.exit(1)" || exit 1
 
 # Run server on port 7860
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
