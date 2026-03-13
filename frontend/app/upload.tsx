@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { analyzeImageDirect } from "../services/api";
-import { speakKn } from "../utils/voice";
+import { speakKn, stopVoice } from "../utils/voice";
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -30,10 +30,11 @@ export default function UploadScreen() {
   useEffect(() => {
     console.log("[UploadScreen] Mounted");
     speakKn(
-      "ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ ಕಾರ್ಡ್‌ನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ."
+      "ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ ಕಾರ್ಡಿನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ."
     );
     return () => {
       console.log("[UploadScreen] Unmounted");
+      stopVoice();
     };
   }, []);
 
@@ -195,8 +196,48 @@ export default function UploadScreen() {
       });
       setNpkStatus(baseStatus);
 
-      // Speak result hint
-      speakKn("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ.");
+      // Speak Kannada summary covering ALL analysed nutrients (pH, EC, OC, N, P2O5, K2O, S, Zn, B, Fe, Mn, Cu...)
+      const list: any[] = analysis.nutrient_status || [];
+      if (list.length > 0) {
+        speakKn(
+          "ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ. ಈಗ pH ರಿಂದ ಕಾಪರ್ ವರೆಗೆ ಎಲ್ಲಾ ಅಂಶಗಳ ಸ್ಥಿತಿಯನ್ನು ಕೇಳಿ."
+        );
+
+        // Read every analysed nutrient once: "<Kannada-friendly name>: <Kannada status>"
+        list.forEach((nutrient: any) => {
+          const rawNameKn: string = nutrient.nutrient_kn || "";
+          const statusKn: string = nutrient.status_kn || "";
+
+          if (!rawNameKn || !statusKn) {
+            return;
+          }
+
+          const base = rawNameKn.toLowerCase();
+          let speakName = rawNameKn;
+
+          // Fix tricky abbreviations so the Kannada TTS sounds natural
+          if (base.includes("ec")) {
+            // EC → “ವಿದ್ಯುತ್‌ ವಾಹಕತೆ, ಇ ಸಿ”
+            speakName = "ವಿದ್ಯುತ್‌ ವಾಹಕತೆ, ಇ ಸಿ";
+          } else if (base.includes("oc")) {
+            // OC → “ಸಾವಯವ ಇಂಗಾಲ, ಓ ಸಿ”
+            speakName = "ಸಾವಯವ ಇಂಗಾಲ, ಓ ಸಿ";
+          } else if (base.includes("p2o5")) {
+            // P₂O₅ → “ಲಭ್ಯ ರಂಜಕ, ಪಿ ಟು ಓ ಫೈವ್”
+            speakName = "ಲಭ್ಯ ರಂಜಕ, ಪಿ ಟು ಓ ಫೈವ್";
+          } else if (base.includes("k2o")) {
+            // K₂O → “ಲಭ್ಯ ಪೊಟ್ಯಾಶ್, ಕೆ ಟು ಓ”
+            speakName = "ಲಭ್ಯ ಪೊಟ್ಯಾಶ್, ಕೆ ಟು ಓ";
+          } else if (base === "fe" || base.includes("fe ")) {
+            // Fe → “ಲಭ್ಯ ಕಬ್ಬಿಣ, ಎಫ್ ಇ”
+            speakName = "ಲಭ್ಯ ಕಬ್ಬಿಣ, ಎಫ್ ಇ";
+          }
+
+          speakKn(`${speakName}: ${statusKn}.`);
+        });
+      } else {
+        speakKn("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ.");
+      }
     } catch (error: any) {
       console.error("[UploadScreen] Upload/Analysis error:", error);
       // Log detailed error info
@@ -218,6 +259,8 @@ export default function UploadScreen() {
   };
 
   const goToRecommendations = () => {
+    // Stop any ongoing speech from analysis summary before navigating
+    stopVoice();
     router.push({
       pathname: "/crops",
       params: {
@@ -246,7 +289,7 @@ export default function UploadScreen() {
             <View style={styles.placeholder}>
               <Text style={styles.placeholderIcon}>📄</Text>
               <Text style={styles.placeholderText}>
-                ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಆಯ್ಕೆಮಾಡಿ
+                ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಆಯ್ಕೆಮಾಡಿ
               </Text>
               <Text style={styles.placeholderSubtext}>
                 Select LRI Card

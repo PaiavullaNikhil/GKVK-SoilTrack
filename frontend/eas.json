@@ -11,6 +11,9 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
       },
+      "ios": {
+        "simulator": true
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
       }
@@ -19,6 +22,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
@@ -30,13 +36,17 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {}
+    }
   }
 }
-

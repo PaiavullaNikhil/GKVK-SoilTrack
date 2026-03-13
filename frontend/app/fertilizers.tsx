@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ALL_CROPS, type CategorizedCrop } from "./crops";
-import { speakKn } from "../utils/voice";
+import { ALL_CROPS, FRUIT_AGE_FERTILITY, type CategorizedCrop } from "./crops";
+import { speakKn, stopVoice } from "../utils/voice";
 
 /* ── Animated accordion wrapper ── */
 function AccordionPanel({
@@ -78,6 +78,100 @@ interface ComboResultItem {
   fertilizers: { label: string; amountKg: number }[];
 }
 
+const FERTILIZER_LABELS: Record<
+  string,
+  { displayKn: string; displayEn: string; speakKn: string }
+> = {
+  // Straight fertilizers
+  Urea: {
+    displayKn: "ಯೂರಿಯಾ",
+    displayEn: "Urea",
+    speakKn: "ಯೂರಿಯಾ",
+  },
+  SSP: {
+    displayKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್ / ಎಸ್ಎಸ್ಪಿ",
+    displayEn: "SSP (Single Super Phosphate)",
+    speakKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್",
+  },
+  MOP: {
+    displayKn: "ಮ್ಯುರಿಯೇಟ್ ಆಫ್ ಪೋಟ್ಯಾಶ್ / ಎಂಓಪಿ",
+    displayEn: "MOP (Muriate of Potash)",
+    speakKn: "ಎಂಓಪಿ ಗೊಬ್ಬರ",
+  },
+  CAN: {
+    displayKn: "ಕ್ಯಾಲ್ಸಿಯಂ ಅಮೋನಿಯಂ ನೈಟ್ರೇಟ್ / ಸಿಎಎನ್",
+    displayEn: "CAN (Calcium Ammonium Nitrate)",
+    speakKn: "ಸಿಎಎನ್ ಗೊಬ್ಬರ",
+  },
+  "Rock Phosphate": {
+    displayKn: "ರಾಕ್ ಫಾಸ್ಫೇಟ್",
+    displayEn: "Rock Phosphate",
+    speakKn: "ರಾಕ್ ಫಾಸ್ಫೇಟ್",
+  },
+  "Ammonium Sulphate": {
+    displayKn: "ಅಮೋನಿಯಂ ಸಲ್ಫೇಟ್",
+    displayEn: "Ammonium Sulphate",
+    speakKn: "ಅಮೋನಿಯಂ ಸಲ್ಫೇಟ್",
+  },
+
+  // Complex / mixed fertilizers
+  DAP: {
+    displayKn: "ಡಿ.ಎ.ಪಿ / ಡೈ ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್",
+    displayEn: "DAP (Di-Ammonium Phosphate)",
+    speakKn: "ಡಿ ಎ ಪಿ ಗೊಬ್ಬರ",
+  },
+  "17:17:17": {
+    displayKn: "17 ಆಲ್",
+    displayEn: "17:17:17 complex fertilizer",
+    speakKn: "ಹದಿನೇಳು ಆಲ್ ಗೊಬ್ಬರ",
+  },
+  "20:20:20": {
+    displayKn: "20 ಆಲ್",
+    displayEn: "20:20:20 complex fertilizer",
+    speakKn: "ಇಪ್ಪತ್ತು ಆಲ್ ಗೊಬ್ಬರ",
+  },
+  "19:19:19": {
+    displayKn: "19 ಆಲ್",
+    displayEn: "19:19:19 complex fertilizer",
+    speakKn: "ಹತ್ತೊಂಬತ್ತು ಆಲ್ ಗೊಬ್ಬರ",
+  },
+  "10:26:26": {
+    displayKn: "10-26 ಗೊಬ್ಬರ",
+    displayEn: "10:26:26 complex fertilizer",
+    speakKn: "ಟೆನ್ ಟ್ವೆಂಟಿ ಸಿಕ್ಸ್ ಗೊಬ್ಬರ",
+  },
+  "20:20:0": {
+    displayKn: "20-20 ಗೊಬ್ಬರ",
+    displayEn: "20:20:0 complex fertilizer",
+    speakKn: "ಇಪ್ಪತ್ತು ಇಪ್ಪತ್ತು ಗೊಬ್ಬರ",
+  },
+  "18:18:0": {
+    displayKn: "18:18:0 ಗೊಬ್ಬರ",
+    displayEn: "18:18:0 complex fertilizer",
+    speakKn: "ಹದಿನೆಂಟು ಹದಿನೆಂಟು ಗೊಬ್ಬರ",
+  },
+  "Ammonium Phosphate": {
+    displayKn: "ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್",
+    displayEn: "Ammonium Phosphate",
+    speakKn: "ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್",
+  },
+};
+
+const getFertilizerMeta = (label: string) => {
+  const meta = FERTILIZER_LABELS[label];
+  if (meta) return meta;
+  return {
+    displayKn: label,
+    displayEn: label,
+    speakKn: label,
+  };
+};
+
+const formatNumber = (value: number, digits: number) => {
+  if (Object.is(value, 0) || Object.is(value, -0)) return "0";
+  return value.toFixed(digits);
+};
+
 export default function FertilizersScreen() {
   const router = useRouter();
   const {
@@ -89,6 +183,7 @@ export default function FertilizersScreen() {
     N_req: N_req_param,
     P_req: P_req_param,
     K_req: K_req_param,
+    ageKey,
   } = useLocalSearchParams<{
     cropId?: string;
     npk?: string;
@@ -98,6 +193,7 @@ export default function FertilizersScreen() {
     N_req?: string;
     P_req?: string;
     K_req?: string;
+    ageKey?: string;
   }>();
 
   const selectedGuntas = Number(guntas || "40") || 40;
@@ -131,9 +227,15 @@ export default function FertilizersScreen() {
       };
     }
 
-    if (!cropMeta || !cropMeta.cerealsFertility) return null;
+    if (!cropMeta) return null;
 
-    const fert = cropMeta.cerealsFertility;
+    const fruitAgeFertility =
+      cropId && ageKey && FRUIT_AGE_FERTILITY[cropId]
+        ? FRUIT_AGE_FERTILITY[cropId][ageKey]
+        : null;
+
+    const fert = cropMeta.cerealsFertility ?? fruitAgeFertility;
+    if (!fert) return null;
     const status = parsedNpkStatus;
 
     const pickLevel = (nutrient: "N" | "P" | "K"): NpkLevel => {
@@ -179,6 +281,7 @@ export default function FertilizersScreen() {
     const { N_req, P_req, K_req } = requirements;
 
     const round = (x: number) => parseFloat(x.toFixed(1));
+    const roundNonNeg = (x: number) => round(Math.max(0, x));
 
     const res: ComboResultItem[] = [];
 
@@ -186,9 +289,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "Urea + SSP + MOP",
       fertilizers: [
-        { label: "Urea", amountKg: round(N_req / 0.46) },
-        { label: "SSP", amountKg: round(P_req / 0.16) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "Urea", amountKg: roundNonNeg(N_req / 0.46) },
+        { label: "SSP", amountKg: roundNonNeg(P_req / 0.16) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -200,9 +303,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "DAP + Urea + MOP",
         fertilizers: [
-          { label: "DAP", amountKg: round(dap) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "MOP", amountKg: round(K_req / 0.60) },
+          { label: "DAP", amountKg: roundNonNeg(dap) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
         ],
       });
     })();
@@ -217,9 +320,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "17:17:17 + Urea + SSP",
         fertilizers: [
-          { label: "17:17:17", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "SSP", amountKg: round(remainingP / 0.16) },
+          { label: "17:17:17", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "SSP", amountKg: roundNonNeg(remainingP / 0.16) },
         ],
       });
     })();
@@ -234,9 +337,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "20:20:20 + Urea + SSP",
         fertilizers: [
-          { label: "20:20:20", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "SSP", amountKg: round(remainingP / 0.16) },
+          { label: "20:20:20", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "SSP", amountKg: roundNonNeg(remainingP / 0.16) },
         ],
       });
     })();
@@ -251,9 +354,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "19:19:19 + Urea + SSP",
         fertilizers: [
-          { label: "19:19:19", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "SSP", amountKg: round(remainingP / 0.16) },
+          { label: "19:19:19", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "SSP", amountKg: roundNonNeg(remainingP / 0.16) },
         ],
       });
     })();
@@ -268,9 +371,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "10:26:26 + Urea + SSP",
         fertilizers: [
-          { label: "10:26:26", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "SSP", amountKg: round(remainingP / 0.16) },
+          { label: "10:26:26", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "SSP", amountKg: roundNonNeg(remainingP / 0.16) },
         ],
       });
     })();
@@ -283,9 +386,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "20:20:0 + Urea + MOP",
         fertilizers: [
-          { label: "20:20:0", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "MOP", amountKg: round(K_req / 0.60) },
+          { label: "20:20:0", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
         ],
       });
     })();
@@ -298,9 +401,9 @@ export default function FertilizersScreen() {
       res.push({
         name: "18:18:0 + Urea + MOP",
         fertilizers: [
-          { label: "18:18:0", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "MOP", amountKg: round(K_req / 0.60) },
+          { label: "18:18:0", amountKg: roundNonNeg(complex) },
+          { label: "Urea", amountKg: roundNonNeg(remainingN / 0.46) },
+          { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
         ],
       });
     })();
@@ -309,9 +412,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "CAN + SSP + MOP",
       fertilizers: [
-        { label: "CAN", amountKg: round(N_req / 0.26) },
-        { label: "SSP", amountKg: round(P_req / 0.16) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "CAN", amountKg: roundNonNeg(N_req / 0.26) },
+        { label: "SSP", amountKg: roundNonNeg(P_req / 0.16) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -334,9 +437,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "Ammonium Sulphate + SSP + MOP",
       fertilizers: [
-        { label: "Ammonium Sulphate", amountKg: round(N_req / 0.21) },
-        { label: "SSP", amountKg: round(P_req / 0.16) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "Ammonium Sulphate", amountKg: roundNonNeg(N_req / 0.21) },
+        { label: "SSP", amountKg: roundNonNeg(P_req / 0.16) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -344,9 +447,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "Urea + Rock Phosphate + MOP",
       fertilizers: [
-        { label: "Urea", amountKg: round(N_req / 0.46) },
-        { label: "Rock Phosphate", amountKg: round(P_req / 0.30) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "Urea", amountKg: roundNonNeg(N_req / 0.46) },
+        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -354,9 +457,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "CAN + Rock Phosphate + MOP",
       fertilizers: [
-        { label: "CAN", amountKg: round(N_req / 0.26) },
-        { label: "Rock Phosphate", amountKg: round(P_req / 0.30) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "CAN", amountKg: roundNonNeg(N_req / 0.26) },
+        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -364,9 +467,9 @@ export default function FertilizersScreen() {
     res.push({
       name: "Ammonium Phosphate + Rock Phosphate + MOP",
       fertilizers: [
-        { label: "Ammonium Phosphate", amountKg: round(P_req / 0.20) },
-        { label: "Rock Phosphate", amountKg: round(P_req / 0.30) },
-        { label: "MOP", amountKg: round(K_req / 0.60) },
+        { label: "Ammonium Phosphate", amountKg: roundNonNeg(P_req / 0.20) },
+        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
+        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
       ],
     });
 
@@ -380,33 +483,54 @@ export default function FertilizersScreen() {
     speakKn(
       "ಇಲ್ಲಿ ಗೊಬ್ಬರ ಸಂಯೋಜನೆಗಳಿವೆ. ನೀವು ಬಳಕೆ ಮಾಡುವ ಗೊಬ್ಬರ ತಂತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ, ನಂತರ ಅದರೊಳಗೆ ಪ್ರತಿಯೊಂದು ಗೊಬ್ಬರವನ್ನು ಎಷ್ಟು ಹಾಕಬೇಕು ಎಂಬುದು ಪಟ್ಟಿಯಲ್ಲಿ ತೋರುತ್ತದೆ."
     );
+    return () => {
+      stopVoice();
+    };
   }, [mode]);
 
   const toggleExpand = useCallback(
     (index: number) => {
       setExpandedIndex((prev) => {
         const next = prev === index ? null : index;
-        if (
-          next !== null &&
-          combos &&
-          combos[next] &&
-          mode === "plants" &&
-          selectedPlants > 0
-        ) {
+        if (next !== null && combos && combos[next]) {
+          stopVoice();
           const combo = combos[next];
           const parts = combo.fertilizers
-            .map(
-              (f) => `${f.label} ${f.amountKg.toFixed(2)} ಕಿಲೋ ಗ್ರಾಂ ಒಟ್ಟು`
-            )
+            .map((f) => {
+              const meta = getFertilizerMeta(f.label);
+              return `${meta.speakKn} ${formatNumber(
+                f.amountKg,
+                2
+              )} ಕಿಲೋ ಗ್ರಾಂ ಒಟ್ಟು`;
+            })
             .join(", ");
-          speakKn(
-            `${combo.name} ತಂತ್ರಕ್ಕಾಗಿ, ${selectedPlants} ಸಸ್ಯಗಳಿಗೆ ಈ ಪ್ರಮಾಣದ ಗೊಬ್ಬರ ಹಾಕಬೇಕು: ${parts}.`
-          );
+
+          const comboSpeakName = combo.fertilizers.reduce((acc, f) => {
+            const meta = getFertilizerMeta(f.label);
+            return acc.replace(f.label, meta.speakKn);
+          }, combo.name);
+
+          if (mode === "plants" && selectedPlants > 0) {
+            speakKn(
+              `${comboSpeakName} ತಂತ್ರಕ್ಕಾಗಿ, ${selectedPlants} ಸಸ್ಯಗಳಿಗೆ ಈ ಪ್ರಮಾಣದ ಗೊಬ್ಬರ ಹಾಕಬೇಕು: ${parts}.`
+            );
+          } else {
+            speakKn(
+              `${comboSpeakName} ತಂತ್ರಕ್ಕಾಗಿ, ${selectedGuntas} ಗುಂಟೆಗಳಿಗಾಗಿ ಈ ಪ್ರಮಾಣದ ಗೊಬ್ಬರ ಹಾಕಬೇಕು: ${parts}.`
+            );
+          }
+
+          // For cereals, also read NOTE content in a natural way.
+          if (cropMeta?.categoryId === "cereals") {
+            speakKn(
+              "ಗಮನದಲ್ಲಿರಿಸಿಕೊಳ್ಳಿ: ಶಿಫಾರಸ್ಸಿನ ಐವತ್ತು ಶತಮಾನ ಸಾರಜನಕವನ್ನು ಭಿತ್ತನೆಯ ಸಮಯದಲ್ಲಿ ಹಾಕಿ, ಉಳಿದ ಐವತ್ತು ಶತಮಾನ ಸಾರಜನಕ ಗೊಬ್ಬರವನ್ನು ಮುವತ್ತು ದಿನಗಳ ನಂತರ ಮೇಲುಗೊಬ್ಬರವಾಗಿ ನೀಡಿ. ಜೊತೆಗೆ ರಂಜಕ ಮತ್ತು ಪೊಟ್ಯಾಷ್ ಗೊಬ್ಬರಗಳನ್ನು ಭಿತ್ತನೆಯ ಸಮಯದಲ್ಲಿ ಪೂರ್ಣ ಪ್ರಮಾಣದಲ್ಲಿ ಒದಗಿಸಿ."
+            );
+          }
         }
         return next;
       });
     },
-    [combos, mode, selectedPlants]
+    [combos, mode, selectedPlants, selectedGuntas, cropMeta]
   );
 
   const scopeLabel =
@@ -515,44 +639,53 @@ export default function FertilizersScreen() {
                             <Text style={styles.perPlantTitle}>
                               {combo.name} per plant
                             </Text>
-                            <Text style={styles.perPlantTitleEn}>
-                              Fertilizer per plant (g / kg)
-                            </Text>
 
                             <View style={styles.resultHeaderRow}>
                               <Text
-                                style={[styles.cellLabel, styles.cellHeading]}
+                                style={[
+                                  styles.cellLabel,
+                                  styles.cellHeading,
+                                  styles.cellColBorder,
+                                ]}
                               >
-                                Fertilizer
+                                ರಸಗೊಬ್ಬರ {"\n"}Fertilizer
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.cellValue,
+                                  styles.cellHeading,
+                                  styles.cellColBorder,
+                                ]}
+                              >
+                                ಗ್ರಾಂ / ಗಿಡಕ್ಕೆ{"\n"}g / plant
                               </Text>
                               <Text
                                 style={[styles.cellValue, styles.cellHeading]}
                               >
-                                g / plant
-                              </Text>
-                              <Text
-                                style={[styles.cellValue, styles.cellHeading]}
-                              >
-                                kg / plant
+                                ಕೆ.ಜಿ / ಗಿಡಕ್ಕೆ{"\n"}kg / plant
                               </Text>
                             </View>
 
                             {combo.fertilizers.map((f) => {
                               const perPlantKg = f.amountKg / selectedPlants;
                               const perPlantG = perPlantKg * 1000;
+                              const meta = getFertilizerMeta(f.label);
                               return (
-                                <View
-                                  key={f.label}
-                                  style={styles.resultRow}
-                                >
-                                  <Text style={styles.cellLabel}>
-                                    {f.label}
+                                <View key={f.label} style={styles.resultRow}>
+                                  <Text
+                                    style={[styles.cellLabel, styles.cellColBorder]}
+                                  >
+                                    {meta.displayKn}
+                                    {"\n"}
+                                    {meta.displayEn}
+                                  </Text>
+                                  <Text
+                                    style={[styles.cellValue, styles.cellColBorder]}
+                                  >
+                                    {formatNumber(perPlantG, 0)}
                                   </Text>
                                   <Text style={styles.cellValue}>
-                                    {perPlantG.toFixed(0)}
-                                  </Text>
-                                  <Text style={styles.cellValue}>
-                                    {perPlantKg.toFixed(3)}
+                                    {formatNumber(perPlantKg, 3)}
                                   </Text>
                                 </View>
                               );
@@ -560,48 +693,57 @@ export default function FertilizersScreen() {
                           </View>
 
                           {/* Total fertilizer table for this strategy */}
-                          <View style={styles.perPlantCard}>
+                            <View style={styles.perPlantCard}>
                             <Text style={styles.perPlantTitle}>
                               Total {combo.name} for {selectedPlants} plants
-                            </Text>
-                            <Text style={styles.perPlantTitleEn}>
-                              Total fertilizer (g / kg)
                             </Text>
 
                             <View style={styles.resultHeaderRow}>
                               <Text
-                                style={[styles.cellLabel, styles.cellHeading]}
+                                style={[
+                                  styles.cellLabel,
+                                  styles.cellHeading,
+                                  styles.cellColBorder,
+                                ]}
                               >
-                                Fertilizer
+                                ರಸಗೊಬ್ಬರ {"\n"}Fertilizer
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.cellValue,
+                                  styles.cellHeading,
+                                  styles.cellColBorder,
+                                ]}
+                              >
+                                ಗ್ರಾಂ | ಒಟ್ಟು{"\n"}Total (g)
                               </Text>
                               <Text
                                 style={[styles.cellValue, styles.cellHeading]}
                               >
-                                Total (g)
-                              </Text>
-                              <Text
-                                style={[styles.cellValue, styles.cellHeading]}
-                              >
-                                Total (kg)
+                                ಕೆ.ಜಿ | ಒಟ್ಟು{"\n"}Total (kg)
                               </Text>
                             </View>
 
                             {combo.fertilizers.map((f) => {
                               const totalKg = f.amountKg;
                               const totalG = totalKg * 1000;
+                              const meta = getFertilizerMeta(f.label);
                               return (
-                                <View
-                                  key={f.label}
-                                  style={styles.resultRow}
-                                >
-                                  <Text style={styles.cellLabel}>
-                                    {f.label}
+                                <View key={f.label} style={styles.resultRow}>
+                                  <Text
+                                    style={[styles.cellLabel, styles.cellColBorder]}
+                                  >
+                                    {meta.displayKn}
+                                    {"\n"}
+                                    {meta.displayEn}
+                                  </Text>
+                                  <Text
+                                    style={[styles.cellValue, styles.cellColBorder]}
+                                  >
+                                    {formatNumber(totalG, 0)}
                                   </Text>
                                   <Text style={styles.cellValue}>
-                                    {totalG.toFixed(0)}
-                                  </Text>
-                                  <Text style={styles.cellValue}>
-                                    {totalKg.toFixed(2)}
+                                    {formatNumber(totalKg, 2)}
                                   </Text>
                                 </View>
                               );
@@ -611,14 +753,21 @@ export default function FertilizersScreen() {
                       ) : (
                         /* Area-based mode: simple fertilizer rows as before */
                         <>
-                          {combo.fertilizers.map((f) => (
-                            <View key={f.label} style={styles.fertRow}>
-                              <Text style={styles.fertLabel}>{f.label}</Text>
-                              <Text style={styles.fertValue}>
-                                {f.amountKg} kg
-                              </Text>
-                            </View>
-                          ))}
+                          {combo.fertilizers.map((f) => {
+                            const meta = getFertilizerMeta(f.label);
+                            return (
+                              <View key={f.label} style={styles.fertRow}>
+                                <Text style={styles.fertLabel}>
+                                  {meta.displayKn}
+                                  {"\n"}
+                                  {meta.displayEn}
+                                </Text>
+                                <Text style={styles.fertValue}>
+                                  {f.amountKg} kg
+                                </Text>
+                              </View>
+                            );
+                          })}
                         </>
                       )}
 
@@ -633,19 +782,64 @@ export default function FertilizersScreen() {
                           </Text>
                         </View>
                         <Text style={styles.totalValue}>
-                          {totalWeight.toFixed(1)} kg
+                          {formatNumber(totalWeight, 1)} kg
                         </Text>
                       </View>
 
                       {/* Advisory */}
                       <View style={styles.advisoryBox}>
                         <Text style={styles.advisoryTitle}>ಸೂಚನೆ / Note</Text>
-                        <Text style={styles.advisoryText}>
-                          Mixing some fertilizers too early can reduce nutrient
-                          availability. Wherever possible, apply{" "}
-                          {combo.fertilizers[0].label} first or mix all
-                          fertilizers just before sowing.
-                        </Text>
+                        {cropMeta?.categoryId === "cereals" ? (
+                          <>
+                            <Text style={styles.advisoryTextKn}>
+                              {`1) ಕೆಲವು ಗೊಬ್ಬರಗಳನ್ನು ತುಂಬಾ ಮುಂಚಿತವಾಗಿ ಮಿಶ್ರಣ ಮಾಡಿದರೆ ಪೋಷಕಾಂಶಗಳ ಲಭ್ಯತೆ ಕಡಿಮೆಯಾಗಬಹುದು. ಸಾಧ್ಯವಾದರೆ ಮೊದಲು ${
+                                getFertilizerMeta(
+                                  combo.fertilizers[0].label
+                                ).speakKn
+                              } ಅನ್ನು ಹಾಕಿ ಅಥವಾ ಎಲ್ಲ ಗೊಬ್ಬರಗಳನ್ನು ಬಿತ್ತನೆಗೆ/ಅನ್ವಯಿಸುವುದಕ್ಕೆ ಮೊದಲು ಮಾತ್ರ ಮಿಶ್ರಣಿಸಿ.`}
+                            </Text>
+                            <Text style={styles.advisoryTextKn}>
+                              2) ಶಿಫಾರಸ್ಸಿನ 50% ಸಾರಜನಕವನ್ನು ಭಿತ್ತನೆಯ ಸಮಯದಲ್ಲಿ ಹಾಕುವುದು
+                              ಹಾಗು ಉಳಿದ 50% ಸಾರಜನಕ ಗೊಬ್ಬರವನ್ನು 30 ದಿನಗಳ ನಂತರ
+                              ಮೇಲುಗೊಬ್ಬರವಾಗಿ ನೀಡುವುದು.
+                            </Text>
+                            <Text style={styles.advisoryTextKn}>
+                              3) ರಂಜಕ ಮತ್ತು ಪೊಟ್ಯಾಷ್ ಗೊಬ್ಬರಗಳನ್ನು ಭಿತ್ತನೆಯ ಸಮಯದಲ್ಲಿ ಪೂರ್ಣ ಪ್ರಮಾಣದಲ್ಲಿ ಒದಗಿಸುವುದು{"\n"}
+                            </Text>
+                            <Text style={styles.advisoryText}>
+                              1) Mixing some fertilizers too early can reduce
+                              nutrient availability. Wherever possible, apply{" "}
+                              {combo.fertilizers[0].label} first or mix all
+                              fertilizers just before sowing.
+                            </Text>
+
+                            <Text style={styles.advisoryText}>
+                              2) Apply 50% of the recommended nitrogen at the
+                              time of sowing, and apply the remaining 50% nitrogen
+                              fertilizer after 30 days.
+                            </Text>
+                            <Text style={styles.advisoryText}>
+                              3) Provide full doses of phosphorus and potash
+                              fertilizers during planting.
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.advisoryTextKn}>
+                              {`ಕೆಲವು ಗೊಬ್ಬರಗಳನ್ನು ತುಂಬಾ ಮುಂಚಿತವಾಗಿ ಮಿಶ್ರಣ ಮಾಡಿದರೆ ಪೋಷಕಾಂಶಗಳ ಲಭ್ಯತೆ ಕಡಿಮೆಯಾಗಬಹುದು. ಸಾಧ್ಯವಾದರೆ ಮೊದಲು ${
+                                getFertilizerMeta(
+                                  combo.fertilizers[0].label
+                                ).speakKn
+                              } ಅನ್ನು ಹಾಕಿ ಅಥವಾ ಎಲ್ಲ ಗೊಬ್ಬರಗಳನ್ನು ಬಿತ್ತನೆಗೆ/ಅನ್ವಯಿಸುವುದಕ್ಕೆ ಮೊದಲು ಮಾತ್ರ ಮಿಶ್ರಣಿಸಿ.`}
+                            </Text>
+                            <Text style={styles.advisoryText}>
+                              Mixing some fertilizers too early can reduce nutrient
+                              availability. Wherever possible, apply{" "}
+                              {combo.fertilizers[0].label} first or mix all
+                              fertilizers just before sowing.
+                            </Text>
+                          </>
+                        )}
                       </View>
                     </View>
                   </AccordionPanel>
@@ -908,6 +1102,12 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 3,
   },
+  advisoryTextKn: {
+    fontSize: 11,
+    color: "#374151",
+    lineHeight: 16,
+    marginBottom: 2,
+  },
   advisoryText: {
     fontSize: 11,
     color: "#4B5563",
@@ -954,19 +1154,24 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F5F5F5",
   },
   cellHeading: {
+    fontSize: 13.5,
     fontWeight: "600",
     color: "#555",
   },
+  cellColBorder: {
+    borderRightWidth: 1,
+    borderRightColor: "#E0E0E0",
+  },
   cellLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
   },
   cellValue: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
-    textAlign: "right",
+    textAlign: "center",
   },
   perPlantCard: {
     backgroundColor: "#fff",

@@ -28,13 +28,15 @@ export default function LandingScreen() {
           {/* Title Section */}
           <View style={styles.titleContainer}>
             <Text style={styles.title}>LRI Fertilizer Advisor</Text>
-            <Text style={styles.subtitle}>Healthy Soil, Happy Harvest! 🌾</Text>
+            <View style={styles.subtitleRow}>
+              <Text style={styles.subtitle}>Healthy Soil, Happy Farmer!</Text>
+            </View>
           </View>
 
           {/* Description */}
           <View style={styles.descriptionContainer}>
             <Text style={styles.description}>
-              ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಬೆಳೆಗೆ ಸೂಕ್ತವಾದ ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ
+              ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಬೆಳೆಗೆ ಸೂಕ್ತವಾದ ಗೊಬ್ಬರ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ
             </Text>
             <Text style={styles.descriptionEn}>
               Scan your LRI card and get personalized fertilizer recommendations for your crops
@@ -121,6 +123,17 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  subtitleIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: "contain",
   },
   descriptionContainer: {
     marginBottom: 50,

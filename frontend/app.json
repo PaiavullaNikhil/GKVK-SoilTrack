@@ -35,13 +35,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow GKVK App to access your camera for capturing soil health cards."
+          "cameraPermission": "Allow SoilTrack App to access your camera for capturing LRI card images."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow GKVK App to access your photos to select soil health card images."
+          "photosPermission": "Allow SoilTrack App to access your photos to select LRI card images."
         }
       ],
       "expo-asset",

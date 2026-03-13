@@ -1,12 +1,22 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { checkHealth } from "../services/api";
-import { speakKn } from "../utils/voice";
+import { getVoiceEnabled, setVoiceEnabled, speakKn, stopVoice } from "../utils/voice";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [voiceEnabled, setVoiceEnabledState] = useState<boolean>(getVoiceEnabled());
 
   useEffect(() => {
     checkApiConnection();
@@ -17,9 +27,19 @@ export default function HomeScreen() {
     setIsConnected(healthy);
   };
 
+  const onToggleVoice = (value: boolean) => {
+    setVoiceEnabledState(value);
+    setVoiceEnabled(value);
+    if (value) {
+      speakKn(
+        "ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ. ನೀವು ಯಾವಾಗ ಬೇಕಾದರೂ ಹೋಮ್ ಪುಟದಲ್ಲಿ ಇದನ್ನು ಆಫ್ ಮಾಡಬಹುದು."
+      );
+    }
+  };
+
   const speakWelcome = () => {
     speakKn(
-      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ. ಎರಡು, ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಫಲಿತಾಂಶ ನೋಡಿ, ನಿಮ್ಮ ಬೆಳೆ ಮತ್ತು ವಯಸ್ಸು ಅಥವಾ ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ. ಮೂರು, ಗೂಂಟೆ ವಿಸ್ತೀರ್ಣ ಅಥವಾ ಸಸ್ಯಗಳ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಗೊಬ್ಬರ ಸಂಯೋಜನೆ ನೋಡಿ."
+      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ. ಎರಡು, ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ. ಮೂರು, ಭೂ ಪ್ರದೇಶ (ಗುಂಟೆ) ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ."
     );
   };
 
@@ -74,7 +94,10 @@ export default function HomeScreen() {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => router.push("/upload")}
+            onPress={() => {
+              stopVoice();
+              router.push("/upload");
+            }}
           >
             <Text style={styles.buttonIcon}>📸</Text>
             <Text style={styles.buttonText}>ಪ್ರಾರಂಭಿಸಿ</Text>
@@ -88,6 +111,19 @@ export default function HomeScreen() {
               <Text style={styles.voiceTextEn}>Listen in Kannada</Text>
             </View>
           </TouchableOpacity>
+
+          <View style={styles.voiceToggleRow}>
+            <View>
+              <Text style={styles.voiceToggleLabelKn}>ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನ</Text>
+              <Text style={styles.voiceToggleLabelEn}>Voice guidance</Text>
+            </View>
+            <Switch
+              value={voiceEnabled}
+              onValueChange={onToggleVoice}
+              thumbColor={voiceEnabled ? "#1B5E20" : "#f4f3f4"}
+              trackColor={{ false: "#d4d4d4", true: "#A5D6A7" }}
+            />
+          </View>
         </View>
 
         {/* Info Section */}
@@ -100,7 +136,7 @@ export default function HomeScreen() {
             <Text style={styles.stepNumber}>1</Text>
             <View style={styles.stepTextContainer}>
               <Text style={styles.stepText}>
-                ಬೂ ಸಂಪನ್ನ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ
+                ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ
               </Text>
               <Text style={styles.stepTextEn}>Take or choose LRI card photo</Text>
             </View>
@@ -109,10 +145,10 @@ export default function HomeScreen() {
             <Text style={styles.stepNumber}>2</Text>
             <View style={styles.stepTextContainer}>
               <Text style={styles.stepText}>
-                ಮಣ್ಣು ವಿಶ್ಲೇಷಣೆ ಫಲಿತಾಂಶ ನೋಡಿ, ಬೆಳೆ ಮತ್ತು ವಯಸ್ಸು / ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ
+                ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ
               </Text>
               <Text style={styles.stepTextEn}>
-                Check soil analysis and select crop & age / variety
+                Select crops based on soil fertility
               </Text>
             </View>
           </View>
@@ -120,10 +156,10 @@ export default function HomeScreen() {
             <Text style={styles.stepNumber}>3</Text>
             <View style={styles.stepTextContainer}>
               <Text style={styles.stepText}>
-                ಗೂಂಟೆ ವಿಸ್ತೀರ್ಣ ಅಥವಾ ಸಸ್ಯಗಳ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಗೊಬ್ಬರ ಮಿಶ್ರಣ ನೋಡಿ
+              ಭೂ ಪ್ರದೇಶ (ಗುಂಟೆ) ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ.
               </Text>
               <Text style={styles.stepTextEn}>
-                Select land area (guntas) or plant count and view fertilizer mix
+                Select land area (guntas) or plant count and get fertilizer details
               </Text>
             </View>
           </View>
@@ -276,6 +312,23 @@ const styles = StyleSheet.create({
   },
   voiceTextEn: {
     fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
+  voiceToggleRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+  },
+  voiceToggleLabelKn: {
+    fontSize: 13,
+    color: "#1B5E20",
+    fontWeight: "500",
+  },
+  voiceToggleLabelEn: {
+    fontSize: 11,
     color: "#666",
     marginTop: 2,
   },

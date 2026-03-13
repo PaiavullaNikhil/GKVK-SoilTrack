@@ -1,9 +1,18 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Animated,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import type { Crop } from "../types";
-import { speakKn } from "../utils/voice";
+import { speakKn, stopVoice } from "../utils/voice";
 
 type SoilFertilityLevel = "very_low" | "low" | "high" | "very_high";
 
@@ -40,61 +49,107 @@ interface CropCategory {
 
 const CROP_CATEGORIES: CropCategory[] = [
   { id: "cereals", title: "Cereals", title_kn: "ಧಾನ್ಯ ಬೆಳೆಗಳು" },
-  { id: "pulses", title: "Pulses", title_kn: "ಕಾಳು ಬೆಳೆಗಳು" },
+  { id: "pulses", title: "Pulses", title_kn: "ದ್ವಿದಳ ಧಾನ್ಯಗಳು" },
   { id: "oilseeds", title: "Oil Seeds", title_kn: "ಎಣ್ಣೆ ಬೀಜಗಳು" },
   { id: "commercial", title: "Commercial Crops", title_kn: "ವಾಣಿಜ್ಯ ಬೆಳೆಗಳು" },
-  { id: "vegetables", title: "Vegetable Crops", title_kn: "ತರಕಾರಿಗಳ ಬೆಳೆಗಳು" },
-  { id: "fruits", title: "Fruit Crops", title_kn: "ಹಣ್ಣು ಬೆಳೆಗಳು" },
-  { id: "grapes", title: "Grapes", title_kn: "ದ್ರಾಕ್ಷಿ" },
-  { id: "cashew_bp", title: "Cashew and BP", title_kn: "ಗೋಡಂಬಿ ಮತ್ತು BP" },
-  { id: "mango", title: "Mango", title_kn: "ಮಾವು" },
-  { id: "coconut", title: "Coconut", title_kn: "ತೆಂಗು" },
-  { id: "arecanut", title: "Arecanut", title_kn: "ಅಡಿಕೆ" },
+  { id: "vegetables", title: "Vegetable Crops", title_kn: "ತರಕಾರಿ ಬೆಳೆಗಳು" },
+  { id: "fruits", title: "Fruit Crops", title_kn: "ಹಣ್ಣುಗಳು" },
+  { id: "plantation", title: "Plantation Crops", title_kn: "ತೋಟಪಟ್ಟಿ ಬೆಳೆಗಳು" },
 ];
 
+const CROP_IMAGES: Record<string, any> = {
+  // Commercial crops
+  sugarcane: require("../assets/commercial_crops/Sugarcane.png"),
+  cotton: require("../assets/commercial_crops/Cotton.png"),
+  tobacco: require("../assets/commercial_crops/Tobacco.png"),
+  ginger: require("../assets/commercial_crops/Ginger.png"),
+  cashew: require("../assets/commercial_crops/Cashews.png"),
+  black_pepper: require("../assets/commercial_crops/BlackPepper.png"),
+
+  // Pulses
+  red_gram_rainfed: require("../assets/pulses/red_gram.jpg"),
+  greengram_blackgram_rainfed: require("../assets/pulses/green_gram&black_gram.png"),
+  cowpea_rainfed: require("../assets/pulses/cowpea.jpg"),
+  field_bean_rainfed: require("../assets/pulses/field_bean.webp"),
+  bengal_gram_rainfed: require("../assets/pulses/bengal_gram.webp"),
+  horse_gram_rainfed: require("../assets/pulses/horse_gram.jpg"),
+
+  // Oil seeds
+  ground_nut_rainfed: require("../assets/oil_seeds/groundnut.jpg"),
+  sunflower_rainfed: require("../assets/oil_seeds/sunflower.jpeg"),
+  soyabean_rainfed: require("../assets/oil_seeds/soyabean.webp"),
+  castor_rainfed: require("../assets/oil_seeds/castor.png"),
+  sesamum_rainfed: require("../assets/oil_seeds/sesasum.png"),
+  niger_rainfed: require("../assets/oil_seeds/niger.png"),
+  safflower_rainfed: require("../assets/oil_seeds/safflower.webp"),
+  mustard_rainfed: require("../assets/oil_seeds/mustard.png"),
+
+  // Vegetable crops
+  tomato: require("../assets/vegetable_crops/tomato.jpg"),
+  turmeric: require("../assets/vegetable_crops/turmeric.jpg"),
+  coriander: require("../assets/vegetable_crops/coriander.jpg"),
+  brinjal: require("../assets/vegetable_crops/brinjal.jpg"),
+  beans: require("../assets/vegetable_crops/beans.webp"),
+  cabbage: require("../assets/vegetable_crops/cabbage.jpg"),
+  potato: require("../assets/vegetable_crops/potato.png"),
+  sweet_potato: require("../assets/vegetable_crops/sweet_potato.jpg"),
+  chillies: require("../assets/vegetable_crops/chillies.jpg"),
+  garlic: require("../assets/vegetable_crops/garlic.jpg"),
+  onion: require("../assets/vegetable_crops/onion.webp"),
+
+  // Fruit crops
+  banana: require("../assets/fruit_crops/banana.webp"),
+  banana_g9: require("../assets/fruit_crops/banana.webp"),
+  banana_elakki: require("../assets/fruit_crops/banana.webp"),
+  papaya: require("../assets/fruit_crops/papaya.webp"),
+  pomegranate: require("../assets/fruit_crops/pomogranate.jpeg"),
+  lemon: require("../assets/fruit_crops/lemon.png"),
+  sapota: require("../assets/fruit_crops/sapota.webp"),
+  guava: require("../assets/fruit_crops/Guava.jpg"),
+  jackfruit: require("../assets/fruit_crops/jackfruit.jpg"),
+  cardamom: require("../assets/fruit_crops/cardamom.png"),
+  mango: require("../assets/fruit_crops/mango.jpg"),
+  grapes: require("../assets/fruit_crops/grapes.jpg"),
+
+  // Plantation crops
+  coconut: require("../assets/plantation_crops/coconut.png"),
+  arecanut: require("../assets/plantation_crops/arecanut.png"),
+
+  // Cereals (millets + major cereals)
+  paddy: require("../assets/cereals/paddy.png"),
+  paddy_kharif_hiv: require("../assets/cereals/paddy.png"),
+  paddy_kharif_hybrids: require("../assets/cereals/paddy.png"),
+  ragi_rainfed: require("../assets/cereals/ragi.png"),
+  kharif_sorghum_rainfed_hybrids: require("../assets/cereals/sorghum.png"),
+  maize_rainfed: require("../assets/cereals/maize.png"),
+  wheat: require("../assets/cereals/wheat.png"),
+  bajra_hybrid_rainfed: require("../assets/cereals/bajra.png"),
+  foxtail_millet_rainfed: require("../assets/cereals/foxtail_millet.jpeg"),
+  kodo_millet_rainfed: require("../assets/cereals/kodo_millet.png"),
+  little_millet_rainfed: require("../assets/cereals/little_millet.jpeg"),
+  barnyard_millet_rainfed: require("../assets/cereals/barnyard_millet.jpeg"),
+  browntop_millet_rainfed: require("../assets/cereals/browntop_millet.png"),
+  proso_millet_rainfed: require("../assets/cereals/proso_millet.png"),
+};
+
+const getCropImage = (cropId: string) =>
+  CROP_IMAGES[cropId] || require("../assets/farmer_icon.png");
+
 // NOTE: These cereals crops and their fertility data are mapped from the GKVK table
-// and kept here for later use in recommendation calculations. They are NOT displayed.
+// and kept here for later use in recommendation calculations.
 const CEREALS_CROPS: CategorizedCrop[] = [
   {
-    id: "paddy_kharif_hiv",
-    name: "Paddy (Kharif, irrigated paddy varieties)",
-    name_kn: "ಮಣ್ಣು (ಖರೀಫ್, ನೀರಾವರಿ ಅಕ್ಕಿ ಜಾತಿಗಳು)",
+    id: "paddy",
+    name: "Paddy",
+    name_kn: "ಭತ್ತ",
     icon: "🌾",
     categoryId: "cereals",
-    cerealsFertility: {
-      rdf: {
-        perAcre: { N: 40, P: 20, K: 20 },
-        perHa: { N: 100, P: 50, K: 50 },
-      },
-      soilClasses: {
-        N: { very_low: 167, low: 133, high: 67, very_high: 33 },
-        P: { very_low: 83.5, low: 66.5, high: 33.3, very_high: 16.5 },
-        K: { very_low: 208.75, low: 166.25, high: 83.5, very_high: 41.25 },
-      },
-    },
-  },
-  {
-    id: "paddy_kharif_hybrids",
-    name: "Paddy (Kharif, Hybrids)",
-    name_kn: "ಮಣ್ಣು (ಖರೀಫ್, ಸಂಕರ ಜಾತಿಗಳು)",
-    icon: "🌾",
-    categoryId: "cereals",
-    cerealsFertility: {
-      rdf: {
-        perAcre: { N: 50, P: 25, K: 25 },
-        perHa: { N: 125, P: 62.5, K: 62.5 },
-      },
-      soilClasses: {
-        N: { very_low: 208.75, low: 166.25, high: 83.5, very_high: 41.25 },
-        P: { very_low: 104.375, low: 83.125, high: 41.875, very_high: 20.9375 },
-        K: { very_low: 261, low: 208.75, high: 104.375, very_high: 52.1875 },
-      },
-    },
+    hasAgeGroups: true,
   },
   {
     id: "ragi_rainfed",
-    name: "Ragi (Rainfed)",
-    name_kn: "ರಾಗಿ (ಮಳೆಆಧಾರಿತ)",
+    name: "Ragi",
+    name_kn: "ರಾಗಿ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -111,8 +166,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "kharif_sorghum_rainfed_hybrids",
-    name: "Kharif Sorghum (Rainfed, Hybrids)",
-    name_kn: "ಖರೀಫ್ ಜೋಳ (ಮಳೆಆಧಾರಿತ, ಸಂಕರ ಜಾತಿಗಳು)",
+    name: "Sorghum",
+    name_kn: "ಜೋಳ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -129,8 +184,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "maize_rainfed",
-    name: "Maize (Rainfed)",
-    name_kn: "ಮೆಕ್ಕೆಜೋಳ (ಮಳೆಆಧಾರಿತ)",
+    name: "Maize",
+    name_kn: "ಮೆಕ್ಕೆಜೋಳ",
     icon: "🌽",
     categoryId: "cereals",
     cerealsFertility: {
@@ -165,8 +220,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "bajra_hybrid_rainfed",
-    name: "Bajra / Pearl Millet (Hybrid, Rainfed)",
-    name_kn: "ಸಜ್ಜೆ / ಪರ್ಳ್ ಮಿಲ್ಲೆಟ್ (ಸಂಕರ, ಮಳೆಆಧಾರಿತ)",
+    name: "Bajra / Pearl Millet",
+    name_kn: "ಸಜ್ಜೆ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -183,8 +238,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "foxtail_millet_rainfed",
-    name: "Foxtail Millet (Rainfed)",
-    name_kn: "ನವಣೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Foxtail Millet",
+    name_kn: "ನವಣೆ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -201,8 +256,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "kodo_millet_rainfed",
-    name: "Kodo Millet (Rainfed)",
-    name_kn: "ಹಾರಕ (ಮಳೆಆಧಾರಿತ)",
+    name: "Kodo Millet",
+    name_kn: "ಹಾರಕ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -219,8 +274,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "little_millet_rainfed",
-    name: "Little Millet (Rainfed)",
-    name_kn: "ಸಾಮೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Little Millet",
+    name_kn: "ಸಾಮೆ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -237,8 +292,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "barnyard_millet_rainfed",
-    name: "Barnyard Millet (Rainfed)",
-    name_kn: "ಊದಲು (ಮಳೆಆಧಾರಿತ)",
+    name: "Barnyard Millet",
+    name_kn: "ಊದಲು",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -255,8 +310,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "browntop_millet_rainfed",
-    name: "Browntop Millet (Rainfed)",
-    name_kn: "ಕೊಂಡಕಾಡು (ಮಳೆಆಧಾರಿತ)",
+    name: "Browntop Millet",
+    name_kn: "ಕೊರಲೆ",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -273,8 +328,8 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "proso_millet_rainfed",
-    name: "Proso Millet (Rainfed)",
-    name_kn: "ಬಿಳಿ ಸಾಮೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Proso Millet",
+    name_kn: "ಬರಗು",
     icon: "🌾",
     categoryId: "cereals",
     cerealsFertility: {
@@ -291,12 +346,12 @@ const CEREALS_CROPS: CategorizedCrop[] = [
   },
 ];
 
-// Pulses (Rainfed) – values mapped from the table, kept for later calculations.
+// Pulses – values mapped from the table, kept for later calculations.
 const PULSES_CROPS: CategorizedCrop[] = [
   {
     id: "red_gram_rainfed",
-    name: "Red gram (Rainfed)",
-    name_kn: "ತೊಗರಿ (ಮಳೆಆಧಾರಿತ)",
+    name: "Red gram",
+    name_kn: "ತೊಗರಿ",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -310,8 +365,8 @@ const PULSES_CROPS: CategorizedCrop[] = [
   },
   {
     id: "greengram_blackgram_rainfed",
-    name: "Greengram and Blackgram (Rainfed)",
-    name_kn: "ಹೆಸರುಕಾಳು ಮತ್ತು ಉದ್ದಿನಕಾಳು (ಮಳೆಆಧಾರಿತ)",
+    name: "Greengram and Blackgram",
+    name_kn: "ಹೆಸರು-ಉದ್ದಿನ ಕಾಳು",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -325,8 +380,8 @@ const PULSES_CROPS: CategorizedCrop[] = [
   },
   {
     id: "cowpea_rainfed",
-    name: "Cowpea (Rainfed)",
-    name_kn: "ಅಲಸಂದೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Cowpea",
+    name_kn: "ಅಲಸಂದೆ",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -340,8 +395,8 @@ const PULSES_CROPS: CategorizedCrop[] = [
   },
   {
     id: "field_bean_rainfed",
-    name: "Field Bean (Rainfed)",
-    name_kn: "ಅವರೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Field Bean",
+    name_kn: "ಅವರೆ",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -355,8 +410,8 @@ const PULSES_CROPS: CategorizedCrop[] = [
   },
   {
     id: "bengal_gram_rainfed",
-    name: "Bengal gram (Rainfed)",
-    name_kn: "ಕಡಲೆಕಾಳು (ಮಳೆಆಧಾರಿತ)",
+    name: "Bengal gram",
+    name_kn: "ಕಡಲೆಕಾಳು",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -370,8 +425,8 @@ const PULSES_CROPS: CategorizedCrop[] = [
   },
   {
     id: "horse_gram_rainfed",
-    name: "Horse gram (Rainfed)",
-    name_kn: "ಹುರಳಿಕಾಳು (ಮಳೆಆಧಾರಿತ)",
+    name: "Horse gram",
+    name_kn: "ಹುರಳಿಕಾಳು",
     icon: "🫘",
     categoryId: "pulses",
     cerealsFertility: {
@@ -379,21 +434,6 @@ const PULSES_CROPS: CategorizedCrop[] = [
       soilClasses: {
         N: { very_low: 41.75, low: 33.25, high: 16.75, very_high: 8.25 },
         P: { very_low: 62.625, low: 49.875, high: 25.125, very_high: 12.375 },
-        K: { very_low: 41.75, low: 33.25, high: 16.75, very_high: 8.25 },
-      },
-    },
-  },
-  {
-    id: "soyabean_rainfed",
-    name: "Soyabean (Rainfed)",
-    name_kn: "ಸೋಯಾಬಿನ್ (ಮಳೆಆಧಾರಿತ)",
-    icon: "🫘",
-    categoryId: "pulses",
-    cerealsFertility: {
-      rdf: { perAcre: { N: 10, P: 25, K: 10 }, perHa: { N: 25, P: 62.5, K: 25 } },
-      soilClasses: {
-        N: { very_low: 41.75, low: 33.25, high: 16.75, very_high: 8.25 },
-        P: { very_low: 104.375, low: 83.125, high: 41.875, very_high: 20.625 },
         K: { very_low: 41.75, low: 33.25, high: 16.75, very_high: 8.25 },
       },
     },
@@ -433,19 +473,12 @@ const COMMERCIAL_CROPS: CategorizedCrop[] = [
     },
   },
   {
-    id: "tobacco",
-    name: "Tobacco",
-    name_kn: "ತಂಬಾಕು",
-    icon: "🍂",
+    id: "cashew",
+    name: "Cashew",
+    name_kn: "ಗೋಡಂಬಿ",
+    icon: "🌰",
     categoryId: "commercial",
-    cerealsFertility: {
-      rdf: { perAcre: { N: 16, P: 12, K: 32 }, perHa: { N: 40, P: 30, K: 80 } },
-      soilClasses: {
-        N: { very_low: 66.8, low: 53.2, high: 26.8, very_high: 13.2 },
-        P: { very_low: 50.1, low: 39.9, high: 20.1, very_high: 9.9 },
-        K: { very_low: 133.6, low: 106.4, high: 53.6, very_high: 26.4 },
-      },
-    },
+    hasAgeGroups: true,
   },
   {
     id: "ginger",
@@ -464,12 +497,12 @@ const COMMERCIAL_CROPS: CategorizedCrop[] = [
   },
 ];
 
-// Oil Seeds (Rainfed) – values mapped from the table, kept for later calculations.
+// Oil Seeds – values mapped from the table, kept for later calculations.
 const OILSEEDS_CROPS: CategorizedCrop[] = [
   {
     id: "ground_nut_rainfed",
-    name: "Ground nut (Rainfed)",
-    name_kn: "ಕಡಲೆಕಾಯಿ (ಮಳೆಆಧಾರಿತ)",
+    name: "Ground nut",
+    name_kn: "ಕಡಲೆಕಾಯಿ",
     icon: "🥜",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -483,8 +516,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "sunflower_rainfed",
-    name: "Sunflower (Rainfed)",
-    name_kn: "ಸೂರ್ಯಕಾಂತಿ (ಮಳೆಆಧಾರಿತ)",
+    name: "Sunflower",
+    name_kn: "ಸೂರ್ಯಕಾಂತಿ",
     icon: "🌻",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -498,8 +531,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "soyabean_rainfed",
-    name: "Soyabean (Rainfed)",
-    name_kn: "ಸೋಯಾಬಿನ್ (ಮಳೆಆಧಾರಿತ)",
+    name: "Soyabean",
+    name_kn: "ಸೋಯಾಬಿನ್",
     icon: "🫘",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -513,8 +546,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "castor_rainfed",
-    name: "Castor (Rainfed)",
-    name_kn: "ಎರೆಂಡೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Castor",
+    name_kn: "ಹರಳು",
     icon: "🌱",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -528,8 +561,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "sesamum_rainfed",
-    name: "Sesamum (Rainfed)",
-    name_kn: "ಎಳ್ಳು (ಮಳೆಆಧಾರಿತ)",
+    name: "Sesamum",
+    name_kn: "ಎಳ್ಳು",
     icon: "🌱",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -543,8 +576,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "niger_rainfed",
-    name: "Niger (Rainfed)",
-    name_kn: "ಉಗ್ಗೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Niger",
+    name_kn: "ಹುಚ್ಚಳ್ಳು",
     icon: "🌱",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -558,8 +591,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "safflower_rainfed",
-    name: "Safflower (Rainfed)",
-    name_kn: "ಕುಸುಬೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Safflower",
+    name_kn: "ಕುಸುಬೆ",
     icon: "🌼",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -573,8 +606,8 @@ const OILSEEDS_CROPS: CategorizedCrop[] = [
   },
   {
     id: "mustard_rainfed",
-    name: "Mustard (Rainfed)",
-    name_kn: "ಸಾಸಿವೆ (ಮಳೆಆಧಾರಿತ)",
+    name: "Mustard",
+    name_kn: "ಸಾಸಿವೆ",
     icon: "🌼",
     categoryId: "oilseeds",
     cerealsFertility: {
@@ -944,36 +977,14 @@ export const ALL_CROPS: CategorizedCrop[] = [
   ...OILSEEDS_CROPS,
   ...COMMERCIAL_CROPS,
   ...VEGETABLE_CROPS,
-  // Fruit crops (selection is by crop; age-wise RDF will be handled later via modal)
+  // Fruit crops (selection is by crop; age/variety RDF will be handled later via modal)
   {
-    id: "banana_g9",
-    name: "Banana (G9)",
-    name_kn: "ಬಾಳೆ (G9)",
+    id: "banana",
+    name: "Banana",
+    name_kn: "ಬಾಳೆ",
     icon: "🍌",
     categoryId: "fruits",
-    cerealsFertility: {
-      rdf: { perHa: { N: 540, P: 325, K: 675 } },
-      soilClasses: {
-        N: { very_low: 901.8, low: 718.2, high: 361.8, very_high: 178.2 },
-        P: { very_low: 542.75, low: 432.25, high: 217.75, very_high: 107.25 },
-        K: { very_low: 1127.25, low: 897.75, high: 452.25, very_high: 222.75 },
-      },
-    },
-  },
-  {
-    id: "banana_elakki",
-    name: "Banana (Elakki)",
-    name_kn: "ಬಾಳೆ (ಎಳಕ್ಕಿ)",
-    icon: "🍌",
-    categoryId: "fruits",
-    cerealsFertility: {
-      rdf: { perHa: { N: 400, P: 240, K: 500 } },
-      soilClasses: {
-        N: { very_low: 668, low: 532, high: 268, very_high: 132 },
-        P: { very_low: 400.8, low: 319.2, high: 160.8, very_high: 79.2 },
-        K: { very_low: 835, low: 665, high: 335, very_high: 165 },
-      },
-    },
+    hasAgeGroups: true,
   },
   {
     id: "papaya",
@@ -1058,7 +1069,7 @@ export const ALL_CROPS: CategorizedCrop[] = [
     name: "Coconut",
     name_kn: "ತೆಂಗು",
     icon: "🥥",
-    categoryId: "coconut",
+    categoryId: "plantation",
     hasAgeGroups: true,
   },
   {
@@ -1066,7 +1077,7 @@ export const ALL_CROPS: CategorizedCrop[] = [
     name: "Arecanut",
     name_kn: "ಅಡಿಕೆ",
     icon: "🌴",
-    categoryId: "arecanut",
+    categoryId: "plantation",
     hasAgeGroups: true,
   },
   // Grapes, Cashew and Black Pepper – age/variety handled later via modal
@@ -1079,24 +1090,31 @@ export const ALL_CROPS: CategorizedCrop[] = [
     hasAgeGroups: true,
   },
   {
-    id: "cashew",
-    name: "Cashew",
-    name_kn: "ಗೋಡಂಬಿ",
-    icon: "🌰",
-    categoryId: "cashew_bp",
-    hasAgeGroups: true,
+    id: "tobacco",
+    name: "Tobacco",
+    name_kn: "ತಂಬಾಕು",
+    icon: "🍂",
+    categoryId: "commercial",
+    cerealsFertility: {
+      rdf: { perAcre: { N: 16, P: 12, K: 32 }, perHa: { N: 40, P: 30, K: 80 } },
+      soilClasses: {
+        N: { very_low: 66.8, low: 53.2, high: 26.8, very_high: 13.2 },
+        P: { very_low: 50.1, low: 39.9, high: 20.1, very_high: 9.9 },
+        K: { very_low: 133.6, low: 106.4, high: 53.6, very_high: 26.4 },
+      },
+    },
   },
   {
     id: "black_pepper",
     name: "Black pepper",
     name_kn: "ಕರಿಮೆಣಸು",
     icon: "🌿",
-    categoryId: "cashew_bp",
+    categoryId: "commercial",
     hasAgeGroups: true,
   },
 ];
 
-type AgeOption = { key: string; label: string };
+type AgeOption = { key: string; label: string; speakLabelKn?: string };
 
 const DEFAULT_AGE_OPTIONS: AgeOption[] = [
   { key: "below_3", label: "3 ವರ್ಷಕ್ಕಿಂತ ಕಡಿಮೆ / Below 3 years" },
@@ -1104,8 +1122,88 @@ const DEFAULT_AGE_OPTIONS: AgeOption[] = [
   { key: "above_7", label: "7 ವರ್ಷಕ್ಕಿಂತ ಹೆಚ್ಚು / Above 7 years" },
 ];
 
+function AgeAccordion({
+  isExpanded,
+  children,
+}: {
+  isExpanded: boolean;
+  children: React.ReactNode;
+}) {
+  const animValue = useRef(new Animated.Value(0)).current;
+  const [contentHeight, setContentHeight] = useState(0);
+  const [shouldRender, setShouldRender] = useState(isExpanded);
+
+  useEffect(() => {
+    if (isExpanded) {
+      setShouldRender(true);
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(animValue, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished) setShouldRender(false);
+      });
+    }
+  }, [isExpanded, animValue]);
+
+  if (!shouldRender) return null;
+
+  const animatedStyle = {
+    maxHeight: animValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, contentHeight || 200],
+    }),
+    opacity: animValue.interpolate({
+      inputRange: [0, 0.3, 1],
+      outputRange: [0, 0.5, 1],
+    }),
+    overflow: "hidden" as const,
+  };
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <View
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && h !== contentHeight) setContentHeight(h);
+        }}
+      >
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
 const AGE_OPTIONS_BY_CROP: Record<string, AgeOption[]> = {
+  // Cereals varieties / groups
+  paddy: [
+    {
+      key: "irrigated",
+      label: " ನೀರಾವರಿ ಭತ್ತ / Irrigated paddy",
+      speakLabelKn: "ನೀರಾವರಿ ಭತ್ತ",
+    },
+    {
+      key: "hybrid",
+      label: "ಸಂಕರಣ ಭತ್ತ / Hybrid paddy",
+      speakLabelKn: "ಸಂಕರಣ ಭತ್ತ",
+    },
+  ],
+
   // Fruit crops with age groups (from table)
+  banana: [
+    { key: "g9", label: "G9 ಜಾತಿ / G9 variety", speakLabelKn: "ಜಿ ನೈನ್ ಜಾತಿ" },
+    {
+      key: "elakki",
+      label: "ಎಳಕ್ಕಿ ಜಾತಿ / Elakki variety",
+      speakLabelKn: "ಎಳಕ್ಕಿ ಜಾತಿ",
+    },
+  ],
   lemon: [
     { key: "year_1", label: "1ನೇ ವರ್ಷ / 1st year" },
     { key: "year_2", label: "2ನೇ ವರ್ಷ / 2nd year" },
@@ -1136,23 +1234,27 @@ const AGE_OPTIONS_BY_CROP: Record<string, AgeOption[]> = {
   ],
   // Mango – per year as in table
   mango: [
-    { key: "year_1", label: "1st year" },
-    { key: "year_2", label: "2nd year" },
-    { key: "year_3", label: "3rd year" },
-    { key: "year_4", label: "4th year" },
-    { key: "year_5", label: "5th year" },
-    { key: "year_6", label: "6th year" },
-    { key: "year_7", label: "7th year" },
-    { key: "year_8", label: "8th year" },
-    { key: "year_9", label: "9th year" },
-    { key: "year_10_plus", label: "10th year and above" },
+    { key: "year_1", label: "1st year", speakLabelKn: "ondane varsha" },
+    { key: "year_2", label: "2nd year", speakLabelKn: "eradane varsha" },
+    { key: "year_3", label: "3rd year", speakLabelKn: "mooraneya varsha" },
+    { key: "year_4", label: "4th year", speakLabelKn: "naalkaneya varsha" },
+    { key: "year_5", label: "5th year", speakLabelKn: "aidaneya varsha" },
+    { key: "year_6", label: "6th year", speakLabelKn: "aaraneya varsha" },
+    { key: "year_7", label: "7th year", speakLabelKn: "elaneya varsha" },
+    { key: "year_8", label: "8th year", speakLabelKn: "enthaneya varsha" },
+    { key: "year_9", label: "9th year", speakLabelKn: "ombatthaneya varsha" },
+    {
+      key: "year_10_plus",
+      label: "10th year and above",
+      speakLabelKn: "hattane varsha mattu mele",
+    },
   ],
   // Coconut – per year as in table
   coconut: [
-    { key: "year_1", label: "1st year" },
-    { key: "year_2", label: "2nd year" },
-    { key: "year_3", label: "3rd year" },
-    { key: "year_4", label: "4th year" },
+    { key: "year_1", label: "1st year", speakLabelKn: "ondane varsha" },
+    { key: "year_2", label: "2nd year", speakLabelKn: "eradane varsha" },
+    { key: "year_3", label: "3rd year", speakLabelKn: "mooraneya varsha" },
+    { key: "year_4", label: "4th year", speakLabelKn: "naalkaneya varsha" },
   ],
   // Arecanut – varieties instead of age
   arecanut: [
@@ -1180,17 +1282,21 @@ const AGE_OPTIONS_BY_CROP: Record<string, AgeOption[]> = {
   ],
   // Cashew age groups
   cashew: [
-    { key: "year_1", label: "1st year" },
-    { key: "year_2", label: "2nd year" },
-    { key: "year_3", label: "3rd year" },
-    { key: "year_4", label: "4th year" },
-    { key: "year_5_plus", label: "5 and above" },
+    { key: "year_1", label: "1st year", speakLabelKn: "ondane varsha" },
+    { key: "year_2", label: "2nd year", speakLabelKn: "eradane varsha" },
+    { key: "year_3", label: "3rd year", speakLabelKn: "mooraneya varsha" },
+    { key: "year_4", label: "4th year", speakLabelKn: "naalkaneya varsha" },
+    {
+      key: "year_5_plus",
+      label: "5 and above",
+      speakLabelKn: "aidane varsha mattu mele",
+    },
   ],
   // Black pepper age groups
   black_pepper: [
-    { key: "year_1", label: "1st year" },
-    { key: "year_2", label: "2nd year" },
-    { key: "year_3", label: "3rd year" },
+    { key: "year_1", label: "1st year", speakLabelKn: "ondane varsha" },
+    { key: "year_2", label: "2nd year", speakLabelKn: "eradane varsha" },
+    { key: "year_3", label: "3rd year", speakLabelKn: "mooraneya varsha" },
   ],
 };
 
@@ -1200,6 +1306,50 @@ export const FRUIT_AGE_FERTILITY: Record<
   string,
   Record<string, CerealsFertilityData>
 > = {
+  // Paddy – handled as varieties under a single crop card
+  paddy: {
+    irrigated: {
+      rdf: {
+        perAcre: { N: 40, P: 20, K: 20 },
+        perHa: { N: 100, P: 50, K: 50 },
+      },
+      soilClasses: {
+        N: { very_low: 167, low: 133, high: 67, very_high: 33 },
+        P: { very_low: 83.5, low: 66.5, high: 33.3, very_high: 16.5 },
+        K: { very_low: 208.75, low: 166.25, high: 83.5, very_high: 41.25 },
+      },
+    },
+    hybrid: {
+      rdf: {
+        perAcre: { N: 50, P: 25, K: 25 },
+        perHa: { N: 125, P: 62.5, K: 62.5 },
+      },
+      soilClasses: {
+        N: { very_low: 208.75, low: 166.25, high: 83.5, very_high: 41.25 },
+        P: { very_low: 104.375, low: 83.125, high: 41.875, very_high: 20.9375 },
+        K: { very_low: 261, low: 208.75, high: 104.375, very_high: 52.1875 },
+      },
+    },
+  },
+
+  banana: {
+    g9: {
+      rdf: { perHa: { N: 540, P: 325, K: 675 } },
+      soilClasses: {
+        N: { very_low: 901.8, low: 718.2, high: 361.8, very_high: 178.2 },
+        P: { very_low: 542.75, low: 432.25, high: 217.75, very_high: 107.25 },
+        K: { very_low: 1127.25, low: 897.75, high: 452.25, very_high: 222.75 },
+      },
+    },
+    elakki: {
+      rdf: { perHa: { N: 400, P: 240, K: 500 } },
+      soilClasses: {
+        N: { very_low: 668, low: 532, high: 268, very_high: 132 },
+        P: { very_low: 400.8, low: 319.2, high: 160.8, very_high: 79.2 },
+        K: { very_low: 835, low: 665, high: 335, very_high: 165 },
+      },
+    },
+  },
   lemon: {
     year_1: {
       rdf: { perHa: { N: 27.7, P: 16.6, K: 27.7 } },
@@ -1477,35 +1627,40 @@ export default function CropsScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("cereals");
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
   const [ageSelections, setAgeSelections] = useState<
-    Record<string, { key: string; label: string }>
+    Record<string, { key: string; label: string; speakLabelKn?: string }>
   >({});
-  const [ageModalCropId, setAgeModalCropId] = useState<string | null>(null);
-  const [ageModalVisible, setAgeModalVisible] = useState(false);
   const categoryListRef = useRef<FlatList<CropCategory> | null>(null);
 
   useEffect(() => {
     speakKn(
       "ಎಡಕ್ಕೆ ಅಥವಾ ಬಲಕ್ಕೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ ಬೆಳೆ ವರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ. ನಂತರ ನಿಮ್ಮ ಬೆಳೆ ಹೆಸರನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ."
     );
+    return () => {
+      stopVoice();
+    };
   }, []);
-
-  const openAgeModal = (cropId: string) => {
-    setAgeModalCropId(cropId);
-    setAgeModalVisible(true);
-  };
-
-  const closeAgeModal = () => {
-    setAgeModalVisible(false);
-  };
 
   const handleSelectCrop = (crop: CategorizedCrop) => {
     if (crop.hasAgeGroups) {
       const existingAge = ageSelections[crop.id];
       if (existingAge) {
         setSelectedCrop(crop.id);
-        speakKn(`${crop.name_kn} - ${existingAge.label}`);
+        speakKn(
+          `${crop.name_kn} - ${existingAge.speakLabelKn || existingAge.label}`
+        );
       } else {
-        openAgeModal(crop.id);
+        setSelectedCrop(crop.id);
+        const isVarietyCrop =
+          crop.id === "grapes" ||
+          crop.id === "arecanut" ||
+          crop.id === "banana" ||
+          crop.id === "paddy";
+        speakKn(
+          `${crop.name_kn}. ${isVarietyCrop
+            ? "ದಯವಿಟ್ಟು ಕೆಳಗಿನ ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+            : "ದಯವಿಟ್ಟು ಕೆಳಗಿನ ವಯಸ್ಸನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+          }`
+        );
       }
     } else {
       setSelectedCrop(crop.id);
@@ -1513,85 +1668,297 @@ export default function CropsScreen() {
     }
   };
 
-  const handleAgeSelect = (option: AgeOption) => {
-    if (!ageModalCropId) return;
-    const crop = ALL_CROPS.find((c) => c.id === ageModalCropId);
+  const handleAgeSelect = (cropId: string, option: AgeOption) => {
+    const crop = ALL_CROPS.find((c) => c.id === cropId);
     setAgeSelections((prev) => ({
       ...prev,
-      [ageModalCropId]: { key: option.key, label: option.label },
+      [cropId]: {
+        key: option.key,
+        label: option.label,
+        speakLabelKn: option.speakLabelKn,
+      },
     }));
-    setSelectedCrop(ageModalCropId);
+    setSelectedCrop(cropId);
     if (crop) {
-      speakKn(`${crop.name_kn} - ${option.label}`);
+      speakKn(`${crop.name_kn} - ${option.speakLabelKn || option.label}`);
     }
-    setAgeModalVisible(false);
   };
 
   const handleContinue = () => {
-    if (selectedCrop) {
-      const age = ageSelections[selectedCrop];
-      const perPlantModeCropIds = new Set([
-        "grapes",
-        "cashew",
-        "black_pepper",
-        "mango",
-        "coconut",
-        "arecanut",
-      ]);
-      const targetPath =
-        perPlantModeCropIds.has(selectedCrop) || age?.key
-          ? perPlantModeCropIds.has(selectedCrop)
-            ? "/plants"
-            : "/area"
-          : "/area";
-      router.push({
-        pathname: targetPath,
-        params: {
-          cropId: selectedCrop,
-          npk: npk || "",
-          ageLabel: age?.label ?? "",
-          ageKey: age?.key ?? "",
-        },
-      });
+    if (!selectedCrop) return;
+
+    const crop = ALL_CROPS.find((c) => c.id === selectedCrop);
+    const age = ageSelections[selectedCrop];
+
+    if (crop?.hasAgeGroups && !age) {
+      const isVarietyCrop =
+        crop.id === "grapes" ||
+        crop.id === "arecanut" ||
+        crop.id === "banana" ||
+        crop.id === "paddy";
+      const titleKn = isVarietyCrop ? "ಜಾತಿ ಆಯ್ಕೆಮಾಡಿ" : "ವಯಸ್ಸು ಆಯ್ಕೆಮಾಡಿ";
+      const messageKn = isVarietyCrop
+        ? "ಮುಂದುವರಿಯುವುದಕ್ಕಿಂತ ಮೊದಲು ದಯವಿಟ್ಟು ಕೆಳಗಿನ ಜಾತಿಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+        : "ಮುಂದುವರಿಯುವುದಕ್ಕಿಂತ ಮೊದಲು ದಯವಿಟ್ಟು ಕೆಳಗಿನ ವಯಸ್ಸಿನ ಗುಂಪುಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ.";
+      Alert.alert(
+        `${titleKn} / ${isVarietyCrop ? "Choose variety" : "Choose age"}`,
+        `${messageKn}\n\n${isVarietyCrop
+          ? "Please choose a variety before continuing."
+          : "Please choose an age group before continuing."
+        }`
+      );
+      speakKn(messageKn);
+      return;
     }
+
+    const perPlantModeCropIds = new Set([
+      "grapes",
+      "cashew",
+      "black_pepper",
+      "mango",
+      "coconut",
+      "arecanut",
+    ]);
+    const targetPath = perPlantModeCropIds.has(selectedCrop) ? "/plants" : "/area";
+    router.push({
+      pathname: targetPath,
+      params: {
+        cropId: selectedCrop,
+        npk: npk || "",
+        ageLabel: age?.label ?? "",
+        ageKey: age?.key ?? "",
+      },
+    });
   };
 
-  const cropsForSelectedCategory = ALL_CROPS.filter(
-    (crop) => crop.categoryId === selectedCategoryId
-  );
+  type GridRow = { id: string; isRow: true; items: CategorizedCrop[] };
 
-  const renderCropItem = ({ item }: { item: CategorizedCrop }) => {
+  const cropsForSelectedCategory = ALL_CROPS.filter((crop) => {
+    if (selectedCategoryId === "fruits") {
+      return (
+        crop.categoryId === "fruits" ||
+        crop.id === "mango" ||
+        crop.id === "grapes"
+      );
+    }
+    return crop.categoryId === selectedCategoryId;
+  });
+
+  const getGridData = (crops: CategorizedCrop[]): (CategorizedCrop | GridRow)[] => {
+    // Use the same two-column image grid for all categories.
+    const rows: GridRow[] = [];
+    for (let i = 0; i < crops.length; i += 2) {
+      rows.push({
+        id: `row_${crops[i].id}`,
+        isRow: true,
+        items: [crops[i], crops[i + 1]].filter(Boolean),
+      });
+    }
+    return rows;
+  };
+
+  const getAgePanelTitleTexts = (
+    crop: CategorizedCrop,
+    isVarietyGroup: boolean
+  ) => {
+    if (isVarietyGroup) {
+      return {
+        kn: `${crop.name_kn} ಅಡಿಯಲ್ಲಿ ಜಾತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ`,
+        en: `Select a variety under ${crop.name}`,
+      };
+    }
+    return {
+      kn: `${crop.name_kn} ಅಡಿಯಲ್ಲಿ ವಯಸ್ಸು ಆಯ್ಕೆಮಾಡಿ`,
+      en: `Select an age group for ${crop.name}`,
+    };
+  };
+
+  const renderCropItem = ({ item }: { item: CategorizedCrop | GridRow }) => {
+    if ("isRow" in item) {
+      return (
+        <View style={{ marginBottom: 16 }}>
+          <View style={[styles.gridColumnWrapper, { flexDirection: "row" }]}>
+            {item.items.map((cropItem) => {
+              const age = ageSelections[cropItem.id];
+              const hasAge = cropItem.hasAgeGroups;
+
+              return (
+                <View key={cropItem.id} style={[styles.gridItemContainer, { marginBottom: 0 }]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.gridCropItem,
+                      selectedCrop === cropItem.id && styles.gridCropItemSelected,
+                    ]}
+                    onPress={() => handleSelectCrop(cropItem)}
+                  >
+                    <Image
+                      source={getCropImage(cropItem.id)}
+                      style={styles.gridCropImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.gridCropTextContainer}>
+                      <Text
+                        style={[
+                          styles.gridCropName,
+                          selectedCategoryId === "pulses" &&
+                            styles.gridCropNameSmall,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {cropItem.name_kn}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.gridCropNameEn,
+                          selectedCategoryId === "pulses" &&
+                            styles.gridCropNameEnSmall,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {cropItem.name}
+                      </Text>
+                      {hasAge && age && (
+                        <View style={styles.gridAgeRow}>
+                          <Text style={styles.gridAgeText} numberOfLines={1}>{age.label}</Text>
+                        </View>
+                      )}
+                    </View>
+                    {selectedCrop === cropItem.id && (
+                      <View style={styles.gridCheckmark}>
+                        <Text style={styles.gridCheckmarkText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+          {item.items.map((cropItem) => {
+            const hasAge = cropItem.hasAgeGroups;
+            if (!hasAge) return null;
+
+            const ageOptions: AgeOption[] =
+              AGE_OPTIONS_BY_CROP[cropItem.id] || DEFAULT_AGE_OPTIONS;
+            const isVarietyGroup =
+              cropItem.id === "grapes" ||
+              cropItem.id === "arecanut" ||
+              cropItem.id === "banana" ||
+              cropItem.id === "paddy";
+            const age = ageSelections[cropItem.id];
+            const titleTexts = getAgePanelTitleTexts(cropItem, isVarietyGroup);
+
+            return (
+              <AgeAccordion key={`acc-${cropItem.id}`} isExpanded={selectedCrop === cropItem.id}>
+                <View style={styles.fullWidthAgePanel}>
+                  <Text style={styles.agePanelTitleKn}>
+                    {titleTexts.kn}
+                  </Text>
+                  <Text style={styles.agePanelTitleEn}>
+                    {titleTexts.en}
+                  </Text>
+                  <View style={styles.gridAgeOptionsVertical}>
+                    {ageOptions.map((opt) => {
+                      const isSelected = age?.key === opt.key;
+                      return (
+                        <TouchableOpacity
+                          key={opt.key}
+                          style={[
+                            styles.gridAgeOptionItem,
+                            isSelected && styles.gridAgeOptionItemSelected,
+                          ]}
+                          onPress={() => handleAgeSelect(cropItem.id, opt)}
+                        >
+                          <Text
+                            style={[
+                              styles.gridAgeOptionText,
+                              isSelected && styles.gridAgeOptionTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </AgeAccordion>
+            );
+          })}
+        </View>
+      );
+    }
+
     const age = ageSelections[item.id];
+    const hasAge = item.hasAgeGroups;
+    const ageOptions: AgeOption[] =
+      (hasAge && AGE_OPTIONS_BY_CROP[item.id]) || DEFAULT_AGE_OPTIONS;
+    const isVarietyGroup =
+      item.id === "grapes" ||
+      item.id === "arecanut" ||
+      item.id === "banana" ||
+      item.id === "paddy";
+    const titleTexts = getAgePanelTitleTexts(item as CategorizedCrop, isVarietyGroup);
+
     return (
-      <TouchableOpacity
-        style={[
-          styles.cropItem,
-          selectedCrop === item.id && styles.cropItemSelected,
-        ]}
-        onPress={() => handleSelectCrop(item)}
-      >
-        <Text style={styles.cropIcon}>{item.icon}</Text>
-        <View style={styles.cropTextContainer}>
-          <Text style={styles.cropName}>{item.name_kn}</Text>
-          <Text style={styles.cropNameEn}>{item.name}</Text>
-          {item.hasAgeGroups && age && (
-            <View style={styles.ageRow}>
-              <Text style={styles.ageText}>{age.label}</Text>
-              <TouchableOpacity
-                style={styles.ageEditChip}
-                onPress={() => openAgeModal(item.id)}
-              >
-                <Text style={styles.ageEditChipText}>Edit</Text>
-              </TouchableOpacity>
+      <View>
+        <TouchableOpacity
+          style={[
+            styles.cropItem,
+            selectedCrop === item.id && styles.cropItemSelected,
+          ]}
+          onPress={() => handleSelectCrop(item)}
+        >
+          <Text style={styles.cropIcon}>{item.icon}</Text>
+          <View style={styles.cropTextContainer}>
+            <Text style={styles.cropName}>{item.name_kn}</Text>
+            <Text style={styles.cropNameEn}>{item.name}</Text>
+            {hasAge && age && (
+              <View style={styles.ageRow}>
+                <Text style={styles.ageText}>{age.label}</Text>
+              </View>
+            )}
+          </View>
+          {selectedCrop === item.id && (
+            <View style={styles.checkmark}>
+              <Text style={styles.checkmarkText}>✓</Text>
             </View>
           )}
-        </View>
-        {selectedCrop === item.id && (
-          <View style={styles.checkmark}>
-            <Text style={styles.checkmarkText}>✓</Text>
+        </TouchableOpacity>
+        <AgeAccordion isExpanded={!!(hasAge && selectedCrop === item.id)}>
+          <View style={styles.ageDetailPanel}>
+            <Text style={styles.agePanelTitleKn}>
+              {titleTexts.kn}
+            </Text>
+            <Text style={styles.agePanelTitleEn}>
+              {titleTexts.en}
+            </Text>
+            <View style={styles.ageOptionsInline}>
+              {ageOptions.map((opt) => {
+                const isSelected = age?.key === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[
+                      styles.modalOptionChip,
+                      isSelected && styles.modalOptionChipSelected,
+                    ]}
+                    onPress={() => handleAgeSelect(item.id, opt)}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        isSelected && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        )}
-      </TouchableOpacity>
+        </AgeAccordion>
+      </View>
     );
   };
 
@@ -1646,74 +2013,15 @@ export default function CropsScreen() {
       </View>
 
       <FlatList
-        data={cropsForSelectedCategory}
-        renderItem={renderCropItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.cropList}
+        key="list"
+        data={getGridData(cropsForSelectedCategory)}
+        renderItem={renderCropItem as any}
+        keyExtractor={(item: any) => item.id}
+        contentContainerStyle={[
+          styles.cropList,
+          selectedCategoryId === "commercial" && styles.gridCropList
+        ]}
       />
-
-      {ageModalCropId && (
-        <Modal
-          animationType="slide"
-          transparent
-          visible={ageModalVisible}
-          onRequestClose={closeAgeModal}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {(() => {
-                const crop = ALL_CROPS.find((c) => c.id === ageModalCropId);
-                const options =
-                  (crop && AGE_OPTIONS_BY_CROP[crop.id]) || DEFAULT_AGE_OPTIONS;
-                const currentAge = ageSelections[ageModalCropId];
-                return (
-                  <>
-                    <Text style={styles.modalTitle}>
-                      {crop?.name_kn} - ವಯೋ ಗುಂಪು
-                    </Text>
-                    <Text style={styles.modalTitleEn}>
-                      {crop?.name} - Select age / variety
-                    </Text>
-                    <View style={styles.modalOptionsContainer}>
-                      {options.map((opt) => {
-                        const isSelected = currentAge?.key === opt.key;
-                        return (
-                          <TouchableOpacity
-                            key={opt.key}
-                            style={[
-                              styles.modalOptionChip,
-                              isSelected && styles.modalOptionChipSelected,
-                            ]}
-                            onPress={() => handleAgeSelect(opt)}
-                          >
-                            <Text
-                              style={[
-                                styles.modalOptionText,
-                                isSelected && styles.modalOptionTextSelected,
-                              ]}
-                            >
-                              {opt.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.modalCancelButton}
-                      onPress={closeAgeModal}
-                    >
-                      <Text style={styles.modalCancelButtonText}>
-                        ಮುಚ್ಚಿ / Close
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                );
-              })()}
-            </View>
-          </View>
-        </Modal>
-      )}
 
       {selectedCrop && (
         <View style={styles.footer}>
@@ -1782,6 +2090,154 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
+  gridCropList: {
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  gridColumnWrapper: {
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+  },
+  gridItemContainer: {
+    width: "48%",
+    marginBottom: 12,
+  },
+  gridCropItem: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    alignItems: "center",
+  },
+  gridCropItemSelected: {
+    borderColor: "#1B5E20",
+    backgroundColor: "#E8F5E9",
+  },
+  gridCropImage: {
+    width: "100%",
+    height: 110,
+    backgroundColor: "#F9F9F9",
+  },
+  gridCropTextContainer: {
+    width: "100%",
+    padding: 10,
+    alignItems: "center",
+  },
+  gridCropName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+  gridCropNameEn: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 2,
+    textAlign: "center",
+  },
+  gridCropNameSmall: {
+    fontSize: 14,
+  },
+  gridCropNameEnSmall: {
+    fontSize: 11,
+  },
+  gridAgeRow: {
+    marginTop: 4,
+    alignItems: "center",
+  },
+  gridAgeText: {
+    fontSize: 10,
+    color: "#1B5E20",
+    textAlign: "center",
+  },
+  gridCheckmark: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#1B5E20",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  gridCheckmarkText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  gridAgeDetailPanel: {
+    marginTop: -10,
+    paddingHorizontal: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: "#FBFCFB",
+    borderLeftWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: "#1B5E20",
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    width: "100%",
+    alignItems: "stretch",
+    zIndex: -1,
+  },
+  fullWidthAgePanel: {
+    marginTop: 8,
+    marginHorizontal: 4,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: "#FBFCFB",
+    borderWidth: 1.5,
+    borderColor: "#1B5E20",
+    borderRadius: 12,
+    width: "auto",
+    alignItems: "stretch",
+  },
+  gridAgeOptionsVertical: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  gridAgeOptionItem: {
+    width: "48%",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gridAgeOptionItemSelected: {
+    backgroundColor: "#E8F5E9",
+    borderColor: "#1B5E20",
+  },
+  gridAgeOptionText: {
+    fontSize: 11,
+    color: "#444",
+    textAlign: "center",
+  },
+  gridAgeOptionTextSelected: {
+    color: "#1B5E20",
+    fontWeight: "700",
+  },
   cropItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1831,6 +2287,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#1B5E20",
     fontWeight: "500",
+  },
+  ageDetailPanel: {
+    marginTop: -4,
+    marginHorizontal: 14,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#F9FAFB",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  ageOptionsInline: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 6,
+  },
+  agePanelTitleKn: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
+  },
+  agePanelTitleEn: {
+    fontSize: 11,
+    color: "#4B5563",
+    marginTop: 2,
+    marginBottom: 6,
   },
   cropName: {
     fontSize: 15,

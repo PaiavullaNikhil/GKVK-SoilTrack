@@ -94,7 +94,7 @@ export default function RootLayout() {
           name="area"
           options={{
             headerTitle: () => (
-              <HeaderTitle kannada="ಭೂಮಿ ವಿಸ್ತೀರ್ಣ" english="Land Area" />
+              <HeaderTitle kannada="ಜಮೀನಿನ ವಿಸ್ತೀರ್ಣ" english="Land Area" />
             ),
             headerTitleAlign: "center",
           }}

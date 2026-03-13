@@ -17,7 +17,7 @@ import {
   PER_PLANT_SPECIAL_FERTILITY,
   type CategorizedCrop,
 } from "./crops";
-import { speakKn } from "../utils/voice";
+import { speakKn, stopVoice } from "../utils/voice";
 
 type NpkLevel = "very_low" | "low" | "medium" | "high" | "very_high";
 type NpkStatusMap = { N: NpkLevel; P: NpkLevel; K: NpkLevel };
@@ -46,6 +46,9 @@ export default function PlantsScreen() {
     speakKn(
       "ಈ ವಯಸ್ಸಿನ ಅಥವಾ ಜಾತಿಯ ಸಸ್ಯಗಳ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ."
     );
+    return () => {
+      stopVoice();
+    };
   }, []);
 
   const parsedNpkStatus: NpkStatusMap | null = useMemo(() => {
@@ -247,18 +250,32 @@ export default function PlantsScreen() {
         {perPlantRequirements && totals && (
           <>
             <View style={styles.resultCard}>
-              <Text style={styles.sectionTitle}>ಒಂದು ಸಸ್ಯಕ್ಕೆ ಬೇಕಾಗುವ ಗೊಬ್ಬರ</Text>
-              <Text style={styles.sectionTitleEn}>NPK per plant</Text>
+              <Text style={styles.sectionTitle}>
+                ಒಂದು ಸಸ್ಯಕ್ಕೆ ಬೇಕಾಗುವ ಪೋಷಕಾಂಶಗಳು (NPK)
+              </Text>
+              <Text style={styles.sectionTitleEn}>NPK nutrients per plant</Text>
 
               <View style={styles.resultHeaderRow}>
-                <Text style={[styles.cellLabel, styles.cellHeading]}>
-                  Nutrient
+                <Text
+                  style={[
+                    styles.cellLabel,
+                    styles.cellHeading,
+                    styles.cellColBorder,
+                  ]}
+                >
+                  ಪೋಷಕಾಂಶಗಳು {"\n"}Nutrient
+                </Text>
+                <Text
+                  style={[
+                    styles.cellValue,
+                    styles.cellHeading,
+                    styles.cellColBorder,
+                  ]}
+                >
+                  ಗ್ರಾಂ / ಗಿಡಕ್ಕೆ{"\n"}g / plant
                 </Text>
                 <Text style={[styles.cellValue, styles.cellHeading]}>
-                  g / plant
-                </Text>
-                <Text style={[styles.cellValue, styles.cellHeading]}>
-                  kg / plant
+                  ಕೆ.ಜಿ / ಗಿಡಕ್ಕೆ{"\n"}kg / plant
                 </Text>
               </View>
 
@@ -269,8 +286,16 @@ export default function PlantsScreen() {
                 const kgVal = perPlantRequirements[kgKey];
                 return (
                   <View key={nutrient} style={styles.resultRow}>
-                    <Text style={styles.cellLabel}>{nutrient}</Text>
-                    <Text style={styles.cellValue}>{gVal}</Text>
+                    <Text style={[styles.cellLabel, styles.cellColBorder]}>
+                      {nutrient === "N"
+                        ? "ನೈಟ್ರೋಜನ್ (N)"
+                        : nutrient === "P"
+                          ? "ಫಾಸ್ಫರಸ್ (P)"
+                          : "ಪೊಟಾಶಿಯಂ (K)"}
+                    </Text>
+                    <Text style={[styles.cellValue, styles.cellColBorder]}>
+                      {gVal}
+                    </Text>
                     <Text style={styles.cellValue}>{kgVal}</Text>
                   </View>
                 );
@@ -279,21 +304,33 @@ export default function PlantsScreen() {
 
             <View style={styles.resultCard}>
               <Text style={styles.sectionTitle}>
-                ಆಯ್ದ ಸಸ್ಯಗಳ ಒಟ್ಟು ಗೊಬ್ಬರ (NPK)
+                ಆಯ್ದ ಸಸ್ಯಗಳ ಒಟ್ಟು ಪೋಷಕಾಂಶಗಳು (NPK)
               </Text>
               <Text style={styles.sectionTitleEn}>
-                Total NPK for {plantCount} plants
+                Total NPK nutrients for {plantCount} plants
               </Text>
 
               <View style={styles.resultHeaderRow}>
-                <Text style={[styles.cellLabel, styles.cellHeading]}>
-                  Nutrient
+                <Text
+                  style={[
+                    styles.cellLabel,
+                    styles.cellHeading,
+                    styles.cellColBorder,
+                  ]}
+                >
+                  ಪೋಷಕಾಂಶಗಳು {"\n"}Nutrient
+                </Text>
+                <Text
+                  style={[
+                    styles.cellValue,
+                    styles.cellHeading,
+                    styles.cellColBorder,
+                  ]}
+                >
+                  ಗ್ರಾಂ | ಒಟ್ಟು{"\n"}Total (g)
                 </Text>
                 <Text style={[styles.cellValue, styles.cellHeading]}>
-                  Total (g)
-                </Text>
-                <Text style={[styles.cellValue, styles.cellHeading]}>
-                  Total (kg)
+                  ಕೆ.ಜಿ | ಒಟ್ಟು{"\n"}Total (kg)
                 </Text>
               </View>
 
@@ -303,8 +340,16 @@ export default function PlantsScreen() {
                 const grams = Math.round(value * 1000);
                 return (
                   <View key={nutrient} style={styles.resultRow}>
-                    <Text style={styles.cellLabel}>{nutrient}</Text>
-                    <Text style={styles.cellValue}>{grams}</Text>
+                    <Text style={[styles.cellLabel, styles.cellColBorder]}>
+                      {nutrient === "N"
+                        ? "ನೈಟ್ರೋಜನ್ (N)"
+                        : nutrient === "P"
+                          ? "ಫಾಸ್ಫರಸ್ (P)"
+                          : "ಪೊಟಾಶಿಯಂ (K)"}
+                    </Text>
+                    <Text style={[styles.cellValue, styles.cellColBorder]}>
+                      {grams}
+                    </Text>
                     <Text style={styles.cellValue}>{value}</Text>
                   </View>
                 );
@@ -450,20 +495,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
+  cellColBorder: {
+    borderRightWidth: 1,
+    borderRightColor: "#E0E0E0",
+  },
   cellHeading: {
+    fontSize: 13.5,
     fontWeight: "600",
     color: "#555",
   },
   cellLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
   },
   cellValue: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
-    textAlign: "right",
+    textAlign: "center",
   },
   actionsContainer: {
     marginTop: 8,

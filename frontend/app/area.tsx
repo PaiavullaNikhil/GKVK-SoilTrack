@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 import { ALL_CROPS, FRUIT_AGE_FERTILITY, type CategorizedCrop } from "./crops";
-import { speakKn } from "../utils/voice";
+import { speakKn, stopVoice } from "../utils/voice";
 
 type NpkLevel = "very_low" | "low" | "medium" | "high" | "very_high";
 type NpkStatusMap = { N: NpkLevel; P: NpkLevel; K: NpkLevel };
@@ -28,6 +28,9 @@ export default function AreaScreen() {
     speakKn(
       "ನಿಮ್ಮ ಹೊಲದಲ್ಲಿ ಎಷ್ಟು ಗೂಂಟೆ ಇದೆ ಆಯ್ಕೆಮಾಡಿ."
     );
+    return () => {
+      stopVoice();
+    };
   }, []);
 
   const parsedNpkStatus: NpkStatusMap | null = useMemo(() => {
@@ -108,7 +111,7 @@ export default function AreaScreen() {
                   selectedGuntas === g && styles.chipTextSelected,
                 ]}
               >
-                {g} ಗೂಂಟೆ
+                {g} ಗುಂಟ
               </Text>
               <Text
                 style={[
@@ -125,31 +128,49 @@ export default function AreaScreen() {
         {totals && (
           <View style={styles.resultCard}>
             <Text style={styles.resultTitle}>
-              ಆಯ್ದ ವಿಸ್ತೀರ್ಣಕ್ಕೆ ಒಟ್ಟು ಗೊಬ್ಬರ (NPK)
+              ಆಯ್ದ ವಿಸ್ತೀರ್ಣಕ್ಕೆ ಒಟ್ಟು ಪೋಷಕಾಂಶಗಳು (NPK)
             </Text>
             <Text style={styles.resultSubtitle}>
               Total fertilizer for {selectedGuntas} guntas
             </Text>
 
             <View style={styles.resultHeaderRow}>
-              <Text style={[styles.cellLabel, styles.cellHeading]}>Nutrient</Text>
-              <Text style={[styles.cellValue, styles.cellHeading]}>Status</Text>
-              <Text style={[styles.cellValue, styles.cellHeading]}>Amount (kg)</Text>
+              <Text
+                style={[styles.cellLabel, styles.cellHeading, styles.cellColBorder]}
+              >
+                ಪೋಷಕಾಂಶಗಳು {"\n"}Nutrient
+              </Text>
+              <Text
+                style={[styles.cellValue, styles.cellHeading, styles.cellColBorder]}
+              >
+                ಸ್ಥಿತಿ {"\n"}Status
+              </Text>
+              <Text style={[styles.cellValue, styles.cellHeading]}>
+                ಪ್ರಮಾಣ (ಕೆ.ಜಿ) {"\n"}Amount (kg)
+              </Text>
             </View>
 
             {(["N", "P", "K"] as const).map((nutrientKey) => {
               const row = totals[nutrientKey];
               const labelMap: Record<NpkLevel, string> = {
-                very_low: "Very low",
-                low: "Low",
-                medium: "Medium",
-                high: "High",
-                very_high: "Very high",
+                very_low: "ಅತ್ಯಂತ ಕಡಿಮೆ (V.L)",
+                low: "ಕಡಿಮೆ (L)",
+                medium: "ಮಧ್ಯಮ (M)",
+                high: "ಹೆಚ್ಚು (H)",
+                very_high: "ಅತ್ಯಂತ ಹೆಚ್ಚು (V.H)",
               };
               return (
                 <View key={nutrientKey} style={styles.resultRow}>
-                  <Text style={styles.cellLabel}>{nutrientKey}</Text>
-                  <Text style={styles.cellValue}>{labelMap[row.level]}</Text>
+                  <Text style={[styles.cellLabel, styles.cellColBorder]}>
+                    {nutrientKey === "N"
+                      ? "ನೈಟ್ರೋಜನ್ (N)"
+                      : nutrientKey === "P"
+                        ? "ಫಾಸ್ಫರಸ್ (P)"
+                        : "ಪೊಟಾಶಿಯಂ (K)"}
+                  </Text>
+                  <Text style={[styles.cellValue, styles.cellColBorder]}>
+                    {labelMap[row.level]}
+                  </Text>
                   <Text style={styles.cellValue}>{row.kg}</Text>
                 </View>
               );
@@ -167,6 +188,7 @@ export default function AreaScreen() {
                   cropId: cropId || "",
                   npk: npk || "",
                   guntas: String(selectedGuntas),
+                  ageKey: ageKey || "",
                 },
               })
             }
@@ -258,20 +280,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
+  cellColBorder: {
+    borderRightWidth: 1,
+    borderRightColor: "#E0E0E0",
+  },
   cellHeading: {
+    fontSize: 13.5,
     fontWeight: "600",
     color: "#555",
   },
   cellLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
   },
   cellValue: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: "#333",
-    textAlign: "right",
+    textAlign: "center",
   },
   actionsContainer: {
     marginTop: 8,

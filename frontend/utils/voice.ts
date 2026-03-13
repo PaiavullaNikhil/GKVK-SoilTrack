@@ -1,45 +1,51 @@
 import * as Speech from "expo-speech";
 
-let knVoiceId: string | undefined;
-let enVoiceId: string | undefined;
-let voicesLoaded = false;
+// Hard‑coded strict male voices from your device
+const KN_MALE_VOICE_ID = "kn-in-x-knd-local";
+const EN_MALE_VOICE_ID = "en-in-x-enc-local";
+
+let voiceEnabled = true;
 
 async function ensureVoices() {
-  if (voicesLoaded) return;
-  try {
-    const voices = await Speech.getAvailableVoicesAsync();
-    knVoiceId =
-      voices.find((v) => v.language?.startsWith("kn"))?.identifier ||
-      undefined;
-    enVoiceId =
-      voices.find((v) => v.language?.startsWith("en-IN"))?.identifier ||
-      voices.find((v) => v.language?.startsWith("en"))?.identifier ||
-      undefined;
-  } catch {
-    // ignore voice loading errors, Speech will fall back to defaults
-  } finally {
-    voicesLoaded = true;
+  // Voices are fixed; nothing dynamic to load any more.
+  return;
+}
+
+export function setVoiceEnabled(enabled: boolean) {
+  voiceEnabled = enabled;
+  if (!enabled) {
+    Speech.stop();
   }
 }
 
+export function getVoiceEnabled() {
+  return voiceEnabled;
+}
+
+export function stopVoice() {
+  Speech.stop();
+}
+
 export async function speakKn(text: string) {
+  if (!voiceEnabled) return;
   await ensureVoices();
+
   Speech.speak(text, {
     language: "kn-IN",
-    voice: knVoiceId,
+    voice: KN_MALE_VOICE_ID,
     rate: 0.9,
     pitch: 1.0,
   });
 }
 
 export async function speakEn(text: string) {
+  if (!voiceEnabled) return;
   await ensureVoices();
+
   Speech.speak(text, {
-    // Prefer Indian English if available
     language: "en-IN",
-    voice: enVoiceId,
+    voice: EN_MALE_VOICE_ID,
     rate: 0.95,
     pitch: 1.0,
   });
 }
-
