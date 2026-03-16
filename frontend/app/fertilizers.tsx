@@ -859,7 +859,10 @@ export default function FertilizersScreen() {
         <View style={styles.backContainer}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.push("/home")}
+            onPress={() => {
+              stopVoice();
+              router.push("/home");
+            }}
           >
             <Text style={styles.backButtonText}>← ಮುಂಭಾಗಕ್ಕೆ</Text>
             <Text style={styles.backButtonTextEn}>← Back to Home</Text>

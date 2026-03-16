@@ -1720,6 +1720,7 @@ export default function CropsScreen() {
       "arecanut",
     ]);
     const targetPath = perPlantModeCropIds.has(selectedCrop) ? "/plants" : "/area";
+    stopVoice();
     router.push({
       pathname: targetPath,
       params: {

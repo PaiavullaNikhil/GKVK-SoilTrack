@@ -36,8 +36,20 @@ class OCRService:
                 import numpy as np
                 from PIL import Image
                 import io
-                # Convert bytes to PIL Image, then to numpy array
+                # Convert bytes to PIL Image
                 image = Image.open(io.BytesIO(image_input))
+                # Downscale very large images to speed up OCR while keeping quality
+                max_side = 1600
+                w, h = image.size
+                scale = max(w, h) / max_side
+                if scale > 1:
+                    new_size = (int(w / scale), int(h / scale))
+                    image = image.resize(new_size, Image.LANCZOS)
+                    print(
+                        f"Downscaled image from {w}x{h} to {new_size[0]}x{new_size[1]}",
+                        flush=True,
+                    )
+                # Convert to numpy array for EasyOCR
                 image_array = np.array(image)
                 print("Converted bytes to numpy array", flush=True)
             elif isinstance(image_input, str):

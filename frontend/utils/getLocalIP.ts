@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 // Fallback IP - automatically updated by detect-ip.js script
 // If auto-detection fails, this will be your current IP
-const FALLBACK_IP = "10.88.215.134";
+const FALLBACK_IP = "10.192.225.134";
 const API_PORT = 8000;
 
 /**

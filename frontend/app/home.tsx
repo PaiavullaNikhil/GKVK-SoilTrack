@@ -10,38 +10,71 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { checkHealth } from "../services/api";
 import { getVoiceEnabled, setVoiceEnabled, speakKn, stopVoice } from "../utils/voice";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(false);
   const [voiceEnabled, setVoiceEnabledState] = useState<boolean>(getVoiceEnabled());
 
   useEffect(() => {
-    checkApiConnection();
+    refreshConnection();
   }, []);
 
-  const checkApiConnection = async () => {
-    const healthy = await checkHealth();
-    setIsConnected(healthy);
+  const refreshConnection = async () => {
+    try {
+      setChecking(true);
+      const healthy = await checkHealth();
+      setIsConnected(healthy);
+    } finally {
+      setChecking(false);
+    }
   };
 
   const onToggleVoice = (value: boolean) => {
     setVoiceEnabledState(value);
     setVoiceEnabled(value);
-    if (value) {
+    if (!value) {
+      stopVoice();
+    } else {
       speakKn(
-        "ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ. ನೀವು ಯಾವಾಗ ಬೇಕಾದರೂ ಹೋಮ್ ಪುಟದಲ್ಲಿ ಇದನ್ನು ಆಫ್ ಮಾಡಬಹುದು."
+        "ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ. ನೀವು ಯಾವಾಗ ಬೇಕಾದರೂ ಈ ಬಟನ್ ಮೂಲಕ ಇದನ್ನು ಆಫ್ ಮಾಡಬಹುದು."
       );
     }
   };
 
   const speakWelcome = () => {
     speakKn(
-      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ. ಎರಡು, ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ. ಮೂರು, ಭೂ ಪ್ರದೇಶ (ಗುಂಟೆ) ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ."
+      "ಹೇಗೆ ಬಳಸುವುದು. ಒಂದು, ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ. ಎರಡು, ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ. ಮೂರು, ಭೂ ಪ್ರದೇಶ ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ."
     );
   };
+
+  const steps = [
+    {
+      id: 1,
+      titleEn: "Take or choose LRI card photo",
+      titleKn: "ಫೋಟೋ ತೆಗೆಯಿರಿ / ಅಥವಾ ಆಯ್ಕೆಮಾಡಿ",
+      descKn:
+        "ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ",
+    },
+    {
+      id: 2,
+      titleEn: "Select crops based on soil fertility",
+      titleKn: "ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ",
+      descKn:
+        "ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ",
+    },
+    {
+      id: 3,
+      titleEn: "Get fertilizer details",
+      titleKn: "ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ",
+      descKn:
+        "ಭೂ ಪ್ರದೇಶ (ಗುಂಟೆ) ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ.",
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -50,119 +83,131 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo/Header Section */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image source={require("../assets/app-icon.png")} style={styles.logoImage} />
-          </View>
-        </View>
-
-        {/* Connection Status */}
-        <View style={styles.statusContainer}>
-          <View
-            style={[
-              styles.statusDot,
-              {
-                backgroundColor:
-                  isConnected === null
-                    ? "#FFC107"
-                    : isConnected
-                      ? "#4CAF50"
-                      : "#F44336",
-              },
-            ]}
+        {/* Hero Banner Section */}
+        <View style={styles.heroBannerContainer}>
+          <Image
+            source={require("../assets/soil_track_hero_banner.png")}
+            style={styles.heroBannerImage}
+            resizeMode="cover"
           />
-          <View>
-            <Text style={styles.statusText}>
-              {isConnected === null
-                ? "ಸಂಪರ್ಕಿಸಲಾಗುತ್ತಿದೆ..."
-                : isConnected
-                  ? "ಸರ್ವರ್ ಸಂಪರ್ಕಗೊಂಡಿದೆ"
-                  : "ಸರ್ವರ್ ಸಂಪರ್ಕವಿಲ್ಲ"}
-            </Text>
-            <Text style={styles.statusTextEn}>
-              {isConnected === null
-                ? "Connecting..."
-                : isConnected
-                  ? "Server Connected"
-                  : "Server Disconnected"}
-            </Text>
+          <View style={styles.heroOverlay}>
+            <View style={styles.greetingBlock}>
+              <Text style={styles.greetingKn}>ನಮಸ್ಕಾರ!</Text>
+              <Text style={styles.greetingSubKn}>ಮಣ್ಣಿನ ಆರೋಗ್ಯವೇ ದೇಶದ ಭಾಗ್ಯ</Text>
+              <Text style={styles.greetingEn}>Welcome! Healthy Soil, Happy Farmer</Text>
+            </View>
           </View>
         </View>
 
-        {/* Main Actions */}
-        <View style={styles.actionsContainer}>
+        <View style={styles.contentBody}>
+          {/* Primary CTA: camera scan */}
           <TouchableOpacity
-            style={styles.primaryButton}
+            activeOpacity={0.85}
+            style={styles.scanCard}
             onPress={() => {
               stopVoice();
               router.push("/upload");
             }}
           >
-            <Text style={styles.buttonIcon}>📸</Text>
-            <Text style={styles.buttonText}>ಪ್ರಾರಂಭಿಸಿ</Text>
-            <Text style={styles.buttonSubtext}>Start Scanning</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.voiceButton} onPress={speakWelcome}>
-            <Text style={styles.voiceIcon}>🔊</Text>
-            <View>
-              <Text style={styles.voiceText}>ಕನ್ನಡದಲ್ಲಿ ಕೇಳಿ</Text>
-              <Text style={styles.voiceTextEn}>Listen in Kannada</Text>
+            <View style={styles.scanCardLeft}>
+              <View style={styles.scanIconBox}>
+                <Text style={styles.scanIconEmoji}>📸</Text>
+              </View>
+              <View style={styles.scanCardTextCol}>
+                <Text style={styles.scanTitleKn}>ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನ್ ಪ್ರಾರಂಭಿಸಿ</Text>
+                <Text style={styles.scanTitleEn}>Start Camera Scan</Text>
+              </View>
+            </View>
+            <View style={styles.scanCardRight}>
+              <Text style={styles.howToArrowEmoji}>➡️</Text>
             </View>
           </TouchableOpacity>
 
-          <View style={styles.voiceToggleRow}>
-            <View>
-              <Text style={styles.voiceToggleLabelKn}>ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನ</Text>
-              <Text style={styles.voiceToggleLabelEn}>Voice guidance</Text>
+          {/* Voice guidance toggle card */}
+          <View style={styles.voiceToggleCard}>
+            <View style={styles.voiceToggleLeft}>
+              <View
+                style={[
+                  styles.voiceToggleIconBox,
+                  voiceEnabled ? styles.voiceToggleIconOn : styles.voiceToggleIconOff,
+                ]}
+              >
+                <Text style={styles.voiceToggleEmoji}>
+                  {voiceEnabled ? "🔊" : "🔇"}
+                </Text>
+              </View>
+              <View>
+                <Text style={styles.voiceToggleLabelKn}>ಧ್ವನಿ ಮಾರ್ಗದರ್ಶನ</Text>
+                <Text style={styles.voiceToggleLabelEn}>Voice guidance</Text>
+              </View>
             </View>
             <Switch
               value={voiceEnabled}
               onValueChange={onToggleVoice}
-              thumbColor={voiceEnabled ? "#1B5E20" : "#f4f3f4"}
-              trackColor={{ false: "#d4d4d4", true: "#A5D6A7" }}
+              thumbColor={voiceEnabled ? "#FFFFFF" : "#f4f3f4"}
+              trackColor={{ false: "#D1D5DB", true: "#1B5E20" }}
             />
           </View>
+
+          {/* How to use (voice) */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.howToCard}
+            onPress={speakWelcome}
+          >
+            <View style={styles.howToLeft}>
+              <View style={styles.howToIconCircle}>
+                <Text style={styles.howToEmoji}>▶️</Text>
+              </View>
+              <View>
+                <Text style={styles.howToTitleKn}>ಬಳಸುವುದು ಹೇಗೆ?</Text>
+                <Text style={styles.howToTitleEn}>How to use (Audio guide)</Text>
+              </View>
+            </View>
+            <View style={styles.howToRight}>
+              <Text style={styles.howToListen}>LISTEN</Text>
+              <Text style={styles.howToArrowEmoji}>➡️</Text>
+            </View>
+          </TouchableOpacity>
+
+        {/* Steps / Instructions - Restored UI */}
+        <View style={styles.stepsSection}>
+          <View style={styles.stepsDividerRow}>
+            <View style={styles.stepsDividerLine} />
+            <Text style={styles.stepsDividerLabel}>Instructions</Text>
+            <View style={styles.stepsDividerLine} />
+          </View>
+
+          {steps.map((step) => (
+            <View key={step.id} style={styles.stepCard}>
+              <View style={styles.stepNumberCol}>
+                <View style={styles.stepNumberCircle}>
+                  <Text style={styles.stepNumberText}>{step.id}</Text>
+                </View>
+                <View style={styles.stepConnector} />
+              </View>
+              <View style={styles.stepContentCol}>
+                <Text style={styles.stepTitleEn}>{step.titleEn}</Text>
+                <Text style={styles.stepTitleKn}>{step.titleKn}</Text>
+                <Text style={styles.stepDescKn}>{step.descKn}</Text>
+              </View>
+            </View>
+          ))}
         </View>
 
-        {/* Info Section */}
-        <View style={styles.infoContainer}>
-          <View>
-            <Text style={styles.infoTitle}>ಹೇಗೆ ಬಳಸುವುದು?</Text>
-            <Text style={styles.infoTitleEn}>How to Use?</Text>
-          </View>
-          <View style={styles.infoStep}>
-            <Text style={styles.stepNumber}>1</Text>
-            <View style={styles.stepTextContainer}>
-              <Text style={styles.stepText}>
-                ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ (LRI) ಕಾರ್ಡ್ ಫೋಟೋ ತೆಗೆಯಿರಿ ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ
+            {/* Quick Tip / Info section to fill space */}
+            <View style={styles.tipCard}>
+              <View style={styles.tipHeader}>
+                <Text style={styles.tipEmoji}>💡</Text>
+                <Text style={styles.tipTitle}>ಮಣ್ಣಿನ ಸಲಹೆ / Quick Tip</Text>
+              </View>
+              <Text style={styles.tipText}>
+                ಮಣ್ಣಿನ ಸಾರವನ್ನು ಕಾಪಾಡಿಕೊಳ್ಳಲು ಸರಿಯಾದ ಪ್ರಮಾಣದಲ್ಲಿ ರಸಗೊಬ್ಬರ ಬಳಸುವುದು ಅತ್ಯಂತ ಅವಶ್ಯಕ.
               </Text>
-              <Text style={styles.stepTextEn}>Take or choose LRI card photo</Text>
-            </View>
-          </View>
-          <View style={styles.infoStep}>
-            <Text style={styles.stepNumber}>2</Text>
-            <View style={styles.stepTextContainer}>
-              <Text style={styles.stepText}>
-                ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆಗಳನ್ನು ಆರಿಸಿಕೊಳ್ಳಿ
-              </Text>
-              <Text style={styles.stepTextEn}>
-                Select crops based on soil fertility
+              <Text style={styles.tipTextEn}>
+                Using the right amount of fertilizer is essential to maintain soil fertility.
               </Text>
             </View>
-          </View>
-          <View style={styles.infoStep}>
-            <Text style={styles.stepNumber}>3</Text>
-            <View style={styles.stepTextContainer}>
-              <Text style={styles.stepText}>
-              ಭೂ ಪ್ರದೇಶ (ಗುಂಟೆ) ಅಥವಾ ಸಸ್ಯ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ರಸಗೊಬ್ಬರ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ.
-              </Text>
-              <Text style={styles.stepTextEn}>
-                Select land area (guntas) or plant count and get fertilizer details
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -179,211 +224,400 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
     paddingBottom: 40,
   },
-  header: {
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 14,
+  contentBody: {
+    padding: 16,
   },
-  logoContainer: {
-    width: 70,
-    height: 70,
+  heroBannerContainer: {
+    width: "100%",
+    height: 180,
     backgroundColor: "#E8F5E9",
-    borderRadius: 35,
-    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+
+  /* Header */
+  appHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  logoImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  appHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  title: {
+  appIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  appIconText: {
     fontSize: 22,
-    fontWeight: "bold",
-    color: "#1B5E20",
-    textAlign: "center",
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 5,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    backgroundColor: "#fff",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignSelf: "center",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  statusText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  statusTextEn: {
-    fontSize: 12,
-    color: "#999",
-    textAlign: "center",
-    marginTop: 2,
-  },
-  actionsContainer: {
-    marginBottom: 18,
-  },
-  primaryButton: {
-    backgroundColor: "#1B5E20",
-    borderRadius: 14,
-    padding: 18,
-    alignItems: "center",
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#1B5E20",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  secondaryButton: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
-    alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#1B5E20",
-  },
-  buttonIcon: {
-    fontSize: 30,
-    marginBottom: 6,
-  },
-  buttonText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  buttonSubtext: {
-    fontSize: 13,
-    color: "#A5D6A7",
-    marginTop: 3,
-  },
-  buttonTextSecondary: {
+  appTitleKn: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#1B5E20",
+    fontWeight: "700",
+    color: "#052e16",
   },
-  buttonSubtextSecondary: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 3,
+  appTitleEn: {
+    fontSize: 11,
+    color: "#16A34A",
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
-  voiceButton: {
+  statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E8F5E9",
-    borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  voiceIcon: {
-    fontSize: 20,
-    marginRight: 10,
+  statusPillPending: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FACC15",
   },
-  voiceText: {
-    fontSize: 16,
-    color: "#1B5E20",
+  statusPillOk: {
+    backgroundColor: "#DBEAFE",
+    borderColor: "#3B82F6",
+  },
+  statusPillError: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#F97373",
+  },
+  statusPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+
+  /* Greeting */
+  greetingBlock: {
+    marginBottom: 0,
+  },
+  greetingKn: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  greetingSubKn: {
+    fontSize: 15,
+    color: "#E8F5E9",
+    marginTop: 2,
     fontWeight: "500",
   },
-  voiceTextEn: {
+  greetingEn: {
     fontSize: 12,
-    color: "#666",
+    color: "rgba(255,255,255,0.8)",
     marginTop: 2,
+    fontStyle: "italic",
   },
-  voiceToggleRow: {
-    marginTop: 10,
+
+  /* Scan Card */
+  scanCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    marginBottom: 14,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+  },
+  scanCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  scanCardTextCol: {
+    flex: 1,
+  },
+  scanTitleKn: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  scanTitleEn: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  scanIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E8F5E9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  scanCardRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  scanIcon: {
+    fontSize: 30,
+    color: "#FFFFFF",
+  },
+
+  /* Voice toggle card */
+  voiceToggleCard: {
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+  },
+  voiceToggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  voiceToggleIconBox: {
+    padding: 6,
+    borderRadius: 12,
+    marginRight: 10,
+  },
+  voiceToggleIconOn: {
+    backgroundColor: "#E8F5E9",
+  },
+  voiceToggleIconOff: {
+    backgroundColor: "#F3F4F6",
+  },
+  voiceToggleIcon: {
+    fontSize: 18,
   },
   voiceToggleLabelKn: {
-    fontSize: 13,
-    color: "#1B5E20",
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
   },
   voiceToggleLabelEn: {
     fontSize: 11,
-    color: "#666",
-    marginTop: 2,
+    color: "#6B7280",
   },
-  infoContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+
+  /* How to card */
+  howToCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#E8F5E9",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#C8E6C9",
+    marginBottom: 24,
     elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 2,
   },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  infoTitleEn: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 14,
-    textAlign: "center",
-  },
-  infoStep: {
+  howToLeft: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
   },
-  stepNumber: {
-    width: 26,
-    height: 26,
-    backgroundColor: "#1B5E20",
-    borderRadius: 13,
-    color: "#fff",
-    textAlign: "center",
-    lineHeight: 26,
-    fontSize: 12,
-    fontWeight: "bold",
+  howToIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
-    overflow: "hidden",
+    elevation: 1,
   },
-  stepTextContainer: {
+  howToIcon: {
+    fontSize: 20,
+  },
+  howToTitleKn: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  howToTitleEn: {
+    fontSize: 11,
+    color: "#6B7280",
+  },
+  howToRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  howToListen: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#1B5E20",
+    marginRight: 6,
+  },
+  scanIconEmoji: {
+    fontSize: 24,
+    textAlign: "center",
+  },
+  voiceToggleEmoji: {
+    fontSize: 20,
+  },
+  howToEmoji: {
+    fontSize: 20,
+  },
+  howToArrowEmoji: {
+    fontSize: 14,
+    color: "#1B5E20",
+  },
+
+  /* Steps section styles - Restored */
+  stepsSection: {
+    paddingTop: 8,
+  },
+  stepsDividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  stepsDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  stepsDividerLabel: {
+    paddingHorizontal: 8,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  stepCard: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    marginBottom: 12,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+  },
+  stepNumberCol: {
+    alignItems: "center",
+    marginRight: 10,
+  },
+  stepNumberCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#E8F5E9",
+    borderWidth: 1,
+    borderColor: "#C8E6C9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNumberText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#1B5E20",
+  },
+  stepConnector: {
+    width: 2,
+    height: 40,
+    backgroundColor: "#E8F5E9",
+    marginTop: 4,
+  },
+  stepContentCol: {
     flex: 1,
   },
-  stepText: {
+  stepTitleKn: {
     fontSize: 14,
-    color: "#333",
+    fontWeight: "600",
+    color: "#111827",
   },
-  stepTextEn: {
+  stepTitleEn: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  stepDescKn: {
     fontSize: 12,
-    color: "#888",
+    color: "#4B5563",
+    lineHeight: 18,
+  },
+  tipCard: {
+    backgroundColor: "#F0F9FF",
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  tipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  tipEmoji: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  tipTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0369A1",
+  },
+  tipText: {
+    fontSize: 12,
+    color: "#0C4A6E",
+    lineHeight: 18,
+  },
+  tipTextEn: {
+    fontSize: 11,
+    color: "#0369A1",
     marginTop: 2,
+    opacity: 0.8,
   },
 });
-

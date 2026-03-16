@@ -164,6 +164,7 @@ export default function PlantsScreen() {
 
   const handleNext = () => {
     if (!cropId || !totals) return;
+    stopVoice();
     router.push({
       pathname: "/fertilizers",
       params: {

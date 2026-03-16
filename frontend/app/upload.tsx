@@ -449,6 +449,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1B5E20",
     fontWeight: "500",
+    textAlign: "center",
   },
   placeholderSubtext: {
     fontSize: 13,

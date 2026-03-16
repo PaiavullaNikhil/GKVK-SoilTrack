@@ -181,7 +181,8 @@ export default function AreaScreen() {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.nextButton}
-            onPress={() =>
+            onPress={() => {
+              stopVoice();
               router.push({
                 pathname: "/fertilizers",
                 params: {
@@ -190,8 +191,8 @@ export default function AreaScreen() {
                   guntas: String(selectedGuntas),
                   ageKey: ageKey || "",
                 },
-              })
-            }
+              });
+            }}
           >
             <Text style={styles.nextButtonText}>ಮುಂದೆ → ಗೊಬ್ಬರ ಸಂಯೋಜನೆ</Text>
             <Text style={styles.nextButtonTextEn}>Next → Fertilizer combinations</Text>

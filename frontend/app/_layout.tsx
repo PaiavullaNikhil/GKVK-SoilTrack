@@ -1,7 +1,10 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import { checkHealth } from "../services/api";
 
 // Custom header title component with Kannada and English
 function HeaderTitle({ kannada, english }: { kannada: string; english: string }) {
@@ -10,6 +13,38 @@ function HeaderTitle({ kannada, english }: { kannada: string; english: string })
       <Text style={headerStyles.kannada}>{kannada}</Text>
       <Text style={headerStyles.english}>{english}</Text>
     </View>
+  );
+}
+
+function ConnectionDot() {
+  const [ok, setOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const healthy = await checkHealth();
+        if (mounted) setOk(healthy);
+      } catch {
+        if (mounted) setOk(false);
+      }
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const iconColor =
+    ok === null ? "#9CA3AF" : ok ? "#3B82F6" : "#EF4444"; // gray, blue, red
+
+  return (
+    <MaterialCommunityIcons
+      name="wifi"
+      size={20}
+      color={iconColor}
+      style={{ marginRight: 12 }}
+    />
   );
 }
 
@@ -48,6 +83,7 @@ export default function RootLayout() {
             backgroundColor: "#F5F5F5",
           },
           headerShadowVisible: true,
+          headerRight: () => <ConnectionDot />,
         }}
       >
         <Stack.Screen
