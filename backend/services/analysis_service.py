@@ -146,7 +146,7 @@ class AnalysisService:
             if value < 1.0:
                 return ("ಸಾಮಾನ್ಯ", self.GREEN, "Normal")
             elif value <= 2.0:
-                return ("ಸ್ವಲ್ಪ ಲವಣ", self.YELLOW, "Slightly Saline")
+                return ("ಲವಣ ರಹಿತ", self.GREEN, "Salt Free")
             else:
                 return ("ಲವಣಯುಕ್ತ", self.RED, "Saline")
         

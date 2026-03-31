@@ -16,9 +16,10 @@ import type {
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // Intentionally no default Content-Type:
+  // - JSON requests will be handled by Axios/React Native automatically
+  // - Multipart requests must use multipart/form-data so FastAPI can parse `UploadFile`
+  headers: {},
 });
 
 // Log the initial API URL for debugging
@@ -112,7 +113,7 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
     uri: imageUri,
     name: fileName,
     type: fileType,
-  } as unknown as Blob);
+  } as any);
 
   try {
     const response = await apiClient.post<UploadResponse>(
@@ -120,7 +121,8 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
       formData,
       {
         headers: {
-          // Let axios set Content-Type automatically with formData boundary
+          // Ensure FastAPI treats this as multipart; RN/axios will add boundary as needed
+          "Content-Type": "multipart/form-data",
         },
       }
     );
@@ -164,7 +166,7 @@ export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResp
       uri: imageUri,
       name: fileName,
       type: fileType,
-    } as unknown as Blob);
+    } as any);
     return fd;
   };
 
@@ -178,7 +180,8 @@ export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResp
         buildFormData(),
         {
           headers: {
-            // Let axios set Content-Type automatically with formData boundary
+            // Ensure FastAPI treats this as multipart; RN/axios will add boundary as needed
+            "Content-Type": "multipart/form-data",
           },
           timeout: 120000, // 2 minutes for OCR processing
         }
