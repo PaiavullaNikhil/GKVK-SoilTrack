@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { checkHealth } from "../services/api";
 import { getVoiceEnabled, setVoiceEnabled, speakKn, stopVoice } from "../utils/voice";
 
@@ -93,8 +92,8 @@ export default function HomeScreen() {
           <View style={styles.heroOverlay}>
             <View style={styles.greetingBlock}>
               <Text style={styles.greetingKn}>ನಮಸ್ಕಾರ!</Text>
-              <Text style={styles.greetingSubKn}>ಮಣ್ಣಿನ ಆರೋಗ್ಯವೇ ದೇಶದ ಭಾಗ್ಯ</Text>
-              <Text style={styles.greetingEn}>Welcome! Healthy Soil, Happy Farmer</Text>
+              <Text style={styles.greetingSubKn}>ಮಣ್ಣಿನ ಆರೋಗ್ಯವೇ ದೇಶದ ಭಾಗ್ಯ!</Text>
+              <Text style={styles.greetingEn}>Welcome! Healthy Soil, Happy Farmer!</Text>
             </View>
           </View>
         </View>

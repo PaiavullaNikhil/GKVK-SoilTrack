@@ -120,7 +120,7 @@ export async function uploadImage(imageUri: string): Promise<UploadResponse> {
       formData,
       {
         headers: {
-          "Content-Type": "multipart/form-data",
+          // Let axios set Content-Type automatically with formData boundary
         },
       }
     );
@@ -178,7 +178,7 @@ export async function analyzeImageDirect(imageUri: string): Promise<AnalysisResp
         buildFormData(),
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            // Let axios set Content-Type automatically with formData boundary
           },
           timeout: 120000, // 2 minutes for OCR processing
         }
