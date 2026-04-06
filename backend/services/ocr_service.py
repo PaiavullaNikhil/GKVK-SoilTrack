@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from io import BytesIO
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -11,6 +12,7 @@ import cv2
 import numpy as np
 from google.api_core.exceptions import GoogleAPICallError, RetryError
 from google.cloud import vision
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -162,8 +164,7 @@ class OCRService:
     def _load_image(self, image_input: Union[str, bytes, np.ndarray]) -> np.ndarray:
         """Load image input into BGR numpy array."""
         if isinstance(image_input, bytes):
-            nparr = np.frombuffer(image_input, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            img = self._decode_image_bytes(image_input)
         elif isinstance(image_input, str):
             img = cv2.imread(image_input, cv2.IMREAD_COLOR)
         else:
@@ -173,6 +174,43 @@ class OCRService:
             raise ValueError("Failed to load image for OCR.")
         return img
 
+    def _decode_image_bytes(self, image_bytes: bytes) -> Optional[np.ndarray]:
+        """Decode image bytes and honor EXIF orientation when available.
+
+        iPhone captures often rely on EXIF orientation; OpenCV decode alone can
+        ignore this and hurt OCR quality when text appears rotated.
+        """
+        try:
+            with Image.open(BytesIO(image_bytes)) as pil_img:
+                pil_img = ImageOps.exif_transpose(pil_img).convert("RGB")
+                rgb = np.array(pil_img)
+                return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        except Exception:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    def _enhance_for_ocr(self, img_bgr: np.ndarray) -> np.ndarray:
+        """Enhance document readability for OCR on phone-captured images."""
+        # Upscale only smaller images to preserve detail without over-blurring.
+        h, w = img_bgr.shape[:2]
+        working = img_bgr
+        if max(h, w) < 1600:
+            working = cv2.resize(
+                img_bgr, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_CUBIC
+            )
+
+        gray = cv2.cvtColor(working, cv2.COLOR_BGR2GRAY)
+        denoised = cv2.fastNlMeansDenoising(gray, h=10.0)
+
+        # Boost local contrast for faint print and low-light captures.
+        clahe = cv2.createCLAHE(clipLimit=2.4, tileGridSize=(8, 8))
+        contrast = clahe.apply(denoised)
+
+        # Light unsharp mask improves character edges.
+        blur = cv2.GaussianBlur(contrast, (0, 0), sigmaX=1.2)
+        sharpened = cv2.addWeighted(contrast, 1.45, blur, -0.45, 0)
+        return sharpened
+
     def _build_preprocess_variants(
         self, img_bgr: np.ndarray
     ) -> List[Tuple[str, bytes]]:
@@ -181,6 +219,10 @@ class OCRService:
 
         # 1) Original color image (sometimes preserves faint Kannada glyphs best)
         variants.append(("original", self._encode_png_bytes(img_bgr)))
+
+        # Build a stronger enhancement baseline for mobile uploads.
+        enhanced_gray = self._enhance_for_ocr(img_bgr)
+        variants.append(("enhanced_gray", self._encode_png_bytes(enhanced_gray)))
 
         # Light upscaling for tiny/low-resolution images
         h, w = img_bgr.shape[:2]

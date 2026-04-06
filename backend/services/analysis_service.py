@@ -161,10 +161,10 @@ class AnalysisService:
         
         # Nitrogen
         if param == "nitrogen":
-            if value < 140:
+            # Per current soil-card interpretation requested by user:
+            # 140-280 should map to "ಕಡಿಮೆ".
+            if value <= 280:
                 return ("ಕಡಿಮೆ", self.RED, "Low")
-            elif value <= 280:
-                return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
             else:
                 return ("ಹೆಚ್ಚು", self.GREEN, "High")
         
