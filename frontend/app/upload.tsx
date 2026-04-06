@@ -5,6 +5,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +28,10 @@ export default function UploadScreen() {
     P: "very_low" | "low" | "medium" | "high" | "very_high";
     K: "very_low" | "low" | "medium" | "high" | "very_high";
   } | null>(null);
+
+  // Status editing state
+  const [editingNutrientIndex, setEditingNutrientIndex] = useState<number | null>(null);
+  const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
 
   useEffect(() => {
     console.log("[UploadScreen] Mounted");
@@ -270,6 +276,83 @@ export default function UploadScreen() {
     });
   };
 
+  const handleStatusSelect = (option: { kn: string; en: string; color: string }) => {
+    if (editingNutrientIndex === null || !analysisResult) return;
+
+    const updatedNutrients = [...analysisResult.nutrient_status];
+    updatedNutrients[editingNutrientIndex] = {
+      ...updatedNutrients[editingNutrientIndex],
+      status_kn: option.kn,
+      color: option.color,
+    };
+
+    const updatedResult = { ...analysisResult, nutrient_status: updatedNutrients };
+    setAnalysisResult(updatedResult);
+
+    // Also update npkStatus if it's N, P, or K
+    const nutrientName = updatedNutrients[editingNutrientIndex].nutrient.toLowerCase();
+    if (nutrientName.includes("nitrogen") || nutrientName.includes("phosphorus") || nutrientName.includes("potassium")) {
+      const baseStatus = { ...npkStatus } as any;
+      const statusKn = option.kn;
+      const level = statusKn.includes("ಅತಿ ಕಡಿಮೆ")
+        ? "very_low"
+        : statusKn.includes("ಕಡಿಮೆ")
+          ? "low"
+          : statusKn.includes("ಮಧ್ಯಮ")
+            ? "medium"
+            : statusKn.includes("ಅತಿ ಹೆಚ್ಚು")
+              ? "very_high"
+              : statusKn.includes("ಹೆಚ್ಚು")
+                ? "high"
+                : "medium";
+
+      if (nutrientName.includes("nitrogen")) baseStatus.N = level;
+      if (nutrientName.includes("phosphorus")) baseStatus.P = level;
+      if (nutrientName.includes("potassium")) baseStatus.K = level;
+      setNpkStatus(baseStatus);
+    }
+
+    setIsStatusModalVisible(false);
+    setEditingNutrientIndex(null);
+  };
+
+  const getStatusOptions = (nutrientName: string) => {
+    const name = nutrientName.toLowerCase();
+    if (name.includes("ph") || name.includes("ರಸಸಾರ")) {
+      return [
+        { kn: "ಆಮ್ಲೀಯ", en: "Acidic", color: "#F97316" },
+        { kn: "ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", en: "Slightly Acidic", color: "#F59E0B" },
+        { kn: "ತಟಸ್ಥ", en: "Neutral", color: "#10B981" },
+        { kn: "ಸ್ವಲ್ಪ ಕ್ಷಾರೀಯ", en: "Slightly Alkaline", color: "#F59E0B" },
+        { kn: "ಕ್ಷಾರೀಯ", en: "Alkaline", color: "#F97316" },
+      ];
+    } else if (name.includes("ec") || name.includes("ವಿದ್ಯುತ್")) {
+      return [
+        { kn: "ಸಾಮಾನ್ಯ", en: "Normal", color: "#10B981" },
+        { kn: "ಲವಣ ರಹಿತ", en: "Salt Free", color: "#10B981" },
+        { kn: "ಲವಣಯುಕ್ತ", en: "Saline", color: "#EF4444" },
+      ];
+    } else if (
+      name.includes("zinc") || name.includes("boron") || name.includes("iron") || 
+      name.includes("manganese") || name.includes("copper") ||
+      name.includes("ಸತು") || name.includes("ಬೋರಾನ್") || name.includes("ಕಬ್ಬಿಣ") ||
+      name.includes("ಮ್ಯಾಂಗನೀಸ್") || name.includes("ತಾಮ್ರ") || name.includes("ಕೊರತೆ") || name.includes("ಸಾಕಷ್ಟು")
+    ) {
+      return [
+        { kn: "ಕೊರತೆ", en: "Deficient", color: "#EF4444" },
+        { kn: "ಸಾಕಷ್ಟು", en: "Sufficient", color: "#10B981" },
+      ];
+    } else {
+      return [
+        { kn: "ಅತಿ ಕಡಿಮೆ", en: "Very Low", color: "#B91C1C" },
+        { kn: "ಕಡಿಮೆ", en: "Low", color: "#EF4444" },
+        { kn: "ಮಧ್ಯಮ", en: "Medium", color: "#F59E0B" },
+        { kn: "ಹೆಚ್ಚು", en: "High", color: "#10B981" },
+        { kn: "ಅತಿ ಹೆಚ್ಚು", en: "Very High", color: "#16A34A" },
+      ];
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -362,22 +445,20 @@ export default function UploadScreen() {
                 <View key={index} style={styles.nutrientRow}>
                   <View style={styles.nutrientInfo}>
                     <Text style={styles.nutrientName}>{nutrient.nutrient_kn}</Text>
-                    <Text style={styles.nutrientValue}>
-                      {nutrient.value_raw
-                        ? `${nutrient.value_raw} ${nutrient.unit}`
-                        : nutrient.value !== null
-                          ? `${nutrient.value} ${nutrient.unit}`
-                          : "—"}
-                    </Text>
                   </View>
-                  <View
+                  <TouchableOpacity
                     style={[
                       styles.statusBadge,
                       { backgroundColor: nutrient.color },
                     ]}
+                    onPress={() => {
+                      setEditingNutrientIndex(index);
+                      setIsStatusModalVisible(true);
+                    }}
                   >
                     <Text style={styles.statusText}>{nutrient.status_kn}</Text>
-                  </View>
+                    <Text style={{ fontSize: 10, color: '#fff', opacity: 0.8, textAlign: 'center' }}>🔄 ಬದಲಿ (Edit)</Text>
+                  </TouchableOpacity>
                 </View>
               )
             )}
@@ -398,6 +479,50 @@ export default function UploadScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Select Status Modal */}
+      <Modal
+        visible={isStatusModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsStatusModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setIsStatusModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ಸ್ಥಿತಿ ಆಯ್ಕೆಮಾಡಿ / Select Status</Text>
+            </View>
+            
+            <ScrollView style={styles.optionsList}>
+              {editingNutrientIndex !== null && 
+                getStatusOptions(analysisResult.nutrient_status[editingNutrientIndex].nutrient).map((option, idx) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={styles.optionItem}
+                    onPress={() => handleStatusSelect(option)}
+                  >
+                    <View style={[styles.optionIndicator, { backgroundColor: option.color }]} />
+                    <View>
+                      <Text style={styles.optionKn}>{option.kn}</Text>
+                      <Text style={styles.optionEn}>{option.en}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              }
+            </ScrollView>
+            
+            <TouchableOpacity 
+              style={styles.cancelBtn}
+              onPress={() => setIsStatusModalVisible(false)}
+            >
+              <Text style={styles.cancelBtnText}>ರದ್ದು / Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -679,6 +804,71 @@ const styles = StyleSheet.create({
     marginTop: 2,
     opacity: 0.9,
     textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '85%',
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1B5E20',
+  },
+  optionsList: {
+    paddingVertical: 10,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    elevation: 1,
+  },
+  optionIndicator: {
+    width: 6,
+    height: 40,
+    borderRadius: 3,
+    marginRight: 16,
+  },
+  optionKn: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: '#333',
+  },
+  optionEn: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  cancelBtn: {
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  cancelBtnText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
