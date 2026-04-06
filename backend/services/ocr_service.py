@@ -10,6 +10,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
+import os
+import json
+from google.oauth2 import service_account
 from google.api_core.exceptions import GoogleAPICallError, RetryError
 from google.cloud import vision
 from PIL import Image, ImageOps
@@ -54,7 +57,34 @@ class OCRService:
     def __init__(self) -> None:
         # Kannada is "kn" in Vision language hints
         self.language_hints = ["en", "kn"]
-        self._client = vision.ImageAnnotatorClient()
+        
+        # Load credentials from .env JSON string or file path
+        creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        creds = None
+        if creds_json:
+            try:
+                # If it looks like JSON, parse it
+                if creds_json.strip().startswith("{"):
+                    info = json.loads(creds_json)
+                    creds = service_account.Credentials.from_service_account_info(info)
+                    logger.info("OCRService: Loaded Google credentials from JSON string in .env")
+                else:
+                    # Treat as file path
+                    creds = service_account.Credentials.from_service_account_file(creds_json)
+                    logger.info(f"OCRService: Loaded Google credentials from file: {creds_json}")
+            except Exception as e:
+                logger.error(f"OCRService: Failed to load Google credentials: {e}")
+        
+        # Initialize client with credentials if found
+        if creds:
+            self._client = vision.ImageAnnotatorClient(credentials=creds)
+            print("OCRService: Successfully initialized with credentials from .env", flush=True)
+        else:
+            # Fallback to default (looks for GOOGLE_APPLICATION_CREDENTIALS file path in env)
+            self._client = vision.ImageAnnotatorClient()
+            print("OCRService: No credentials in .env, using default ADC", flush=True)
+            logger.warning("OCRService: No valid credentials found in .env, falling back to default ADC")
+
         # More variants improve low-quality OCR but cost extra API calls.
         self.max_ocr_passes = 3
         logger.info("OCRService (Google Cloud Vision) initialized.")
