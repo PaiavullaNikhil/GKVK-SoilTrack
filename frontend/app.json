@@ -26,7 +26,11 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -37,14 +41,14 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SoilTrack App to access your camera for capturing LRI card images.",
-          "recordAudioPermission": "Allow SoilTrack App to access your microphone for recording during card capture."
+          "cameraPermission": "Allow LRI FERTILIZER App to access your camera for capturing LRI card images.",
+          "recordAudioPermission": "Allow LRI FERTILIZER App to access your microphone for recording during card capture."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow SoilTrack App to access your photos to select LRI card images."
+          "photosPermission": "Allow LRI FERTILIZER App to access your photos to select LRI card images."
         }
       ],
       "expo-asset",
