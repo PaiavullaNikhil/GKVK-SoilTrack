@@ -85,9 +85,9 @@ export default function HomeScreen() {
         {/* Hero Banner Section */}
         <View style={styles.heroBannerContainer}>
           <Image
-            source={require("../assets/soil_track_hero_banner.png")}
+            source={require("../assets/hero_banner.png")}
             style={styles.heroBannerImage}
-            resizeMode="cover"
+            resizeMode="stretch"
           />
           <View style={styles.heroOverlay}>
             <View style={styles.greetingBlock}>

@@ -1,11 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  Pressable,
 } from "react-native";
 
 import { ALL_CROPS, FRUIT_AGE_FERTILITY, type CategorizedCrop } from "./crops";
@@ -23,11 +25,10 @@ export default function AreaScreen() {
   }>();
 
   const [selectedGuntas, setSelectedGuntas] = useState<number>(40);
+  const [guntaInput, setGuntaInput] = useState<string>("40");
 
   useEffect(() => {
-    speakKn(
-      "ನಿಮ್ಮ ಹೊಲದಲ್ಲಿ ಎಷ್ಟು ಗೂಂಟೆ ಇದೆ ಆಯ್ಕೆಮಾಡಿ."
-    );
+    speakKn("ನಿಮ್ಮ ಹೊಲದಲ್ಲಿ ಎಷ್ಟು ಗುಂಟೆ ಇದೆ ಎಂದು ನಮೂದಿಸಿ.");
     return () => {
       stopVoice();
     };
@@ -51,7 +52,7 @@ export default function AreaScreen() {
     [cropId]
   );
 
-  const totals = useMemo(() => {
+  const calculateTotalsForArea = (area: number) => {
     const fruitAgeFertility =
       cropId && ageKey && FRUIT_AGE_FERTILITY[cropId]
         ? FRUIT_AGE_FERTILITY[cropId][ageKey]
@@ -61,14 +62,13 @@ export default function AreaScreen() {
     if (!fert) return null;
 
     const status = parsedNpkStatus;
-    const levels: NpkLevel[] = ["very_low", "low", "medium", "high", "very_high"];
 
     const kgForLevel = (nutrient: "N" | "P" | "K", level: NpkLevel) => {
       const perHa =
         level === "medium"
           ? fert.rdf.perHa[nutrient]
           : fert.soilClasses[nutrient][level];
-      const areaHa = (selectedGuntas * 0.4047) / 40; // 40 guntas = 1 acre = 0.4047 ha
+      const areaHa = (area * 0.4047) / 40; // 40 guntas = 1 acre = 0.4047 ha
       return parseFloat((perHa * areaHa).toFixed(2));
     };
 
@@ -88,93 +88,142 @@ export default function AreaScreen() {
       P: { level: Plevel, kg: kgForLevel("P", Plevel) },
       K: { level: Klevel, kg: kgForLevel("K", Klevel) },
     };
-  }, [cropMeta, cropId, ageKey, parsedNpkStatus, selectedGuntas]);
+  };
 
-  const guntasOptions = Array.from({ length: 8 }, (_, i) => (i + 1) * 10);
+  const baselineTotals = useMemo(
+    () => calculateTotalsForArea(40),
+    [cropMeta, cropId, ageKey, parsedNpkStatus]
+  );
+
+  const customTotals = useMemo(
+    () => calculateTotalsForArea(selectedGuntas),
+    [cropMeta, cropId, ageKey, parsedNpkStatus, selectedGuntas]
+  );
+
+  const renderNutrientTable = (totalsData: any) => {
+    return (
+      <>
+        <View style={styles.resultHeaderRow}>
+          <Text
+            style={[styles.cellLabel, styles.cellHeading, styles.cellColBorder]}
+          >
+            ಪೋಷಕಾಂಶಗಳು {"\n"}Nutrient
+          </Text>
+          <Text
+            style={[styles.cellValue, styles.cellHeading, styles.cellColBorder]}
+          >
+            ಸ್ಥಿತಿ {"\n"}Status
+          </Text>
+          <Text style={[styles.cellValue, styles.cellHeading]}>
+            ಪ್ರಮಾಣ (ಕೆ.ಜಿ) {"\n"}Amount (kg)
+          </Text>
+        </View>
+
+        {(["N", "P", "K"] as const).map((nutrientKey) => {
+          const row = totalsData[nutrientKey];
+          const labelMap: Record<NpkLevel, string> = {
+            very_low: "ಅತ್ಯಂತ ಕಡಿಮೆ (V.L)",
+            low: "ಕಡಿಮೆ (L)",
+            medium: "ಮಧ್ಯಮ (M)",
+            high: "ಹೆಚ್ಚು (H)",
+            very_high: "ಅತ್ಯಂತ ಹೆಚ್ಚು (V.H)",
+          };
+          return (
+            <View key={nutrientKey} style={styles.resultRow}>
+              <Text style={[styles.cellLabel, styles.cellColBorder]}>
+                {nutrientKey === "N"
+                  ? "ನೈಟ್ರೋಜನ್ (N)"
+                  : nutrientKey === "P"
+                  ? "ಫಾಸ್ಫರಸ್ (P)"
+                  : "ಪೊಟಾಶಿಯಂ (K)"}
+              </Text>
+              <Text style={[styles.cellValue, styles.cellColBorder]}>
+                {labelMap[row.level as NpkLevel]}
+              </Text>
+              <Text style={styles.cellValue}>{row.kg}</Text>
+            </View>
+          );
+        })}
+      </>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.chipGrid}>
-          {guntasOptions.map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[
-                styles.chip,
-                selectedGuntas === g && styles.chipSelected,
-              ]}
-              onPress={() => setSelectedGuntas(g)}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selectedGuntas === g && styles.chipTextSelected,
-                ]}
-              >
-                {g} ಗುಂಟ
-              </Text>
-              <Text
-                style={[
-                  styles.chipTextEn,
-                  selectedGuntas === g && styles.chipTextSelected,
-                ]}
-              >
-                {g} guntas
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* ── Area Input Card ── */}
+        <View style={styles.inputCard}>
+          <View style={styles.inputHeader}>
+            <Text style={styles.inputHeaderIcon}>📐</Text>
+            <View>
+              <Text style={styles.inputHeaderKn}>ಭೂಮಿಯ ವಿಸ್ತೀರ್ಣ</Text>
+              <Text style={styles.inputHeaderEn}>Land Area</Text>
+            </View>
+          </View>
 
-        {totals && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultTitle}>
-              ಆಯ್ದ ವಿಸ್ತೀರ್ಣಕ್ಕೆ ಒಟ್ಟು ಪೋಷಕಾಂಶಗಳು (NPK)
+          <View style={styles.inputBody}>
+            <Text style={styles.inputHintKn}>
+              ನಿಮ್ಮ ಹೊಲದ ಗುಂಟೆ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ
             </Text>
-            <Text style={styles.resultSubtitle}>
-              Total fertilizer for {selectedGuntas} guntas
+            <Text style={styles.inputHintEn}>
+              Enter the number of guntas in your field
             </Text>
 
-            <View style={styles.resultHeaderRow}>
-              <Text
-                style={[styles.cellLabel, styles.cellHeading, styles.cellColBorder]}
-              >
-                ಪೋಷಕಾಂಶಗಳು {"\n"}Nutrient
-              </Text>
-              <Text
-                style={[styles.cellValue, styles.cellHeading, styles.cellColBorder]}
-              >
-                ಸ್ಥಿತಿ {"\n"}Status
-              </Text>
-              <Text style={[styles.cellValue, styles.cellHeading]}>
-                ಪ್ರಮಾಣ (ಕೆ.ಜಿ) {"\n"}Amount (kg)
-              </Text>
+            <View style={styles.inputRow}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.textInput}
+                  value={guntaInput}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9.]/g, "");
+                    setGuntaInput(cleaned);
+                    const val = parseFloat(cleaned);
+                    if (!isNaN(val) && val > 0) {
+                      setSelectedGuntas(val);
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={5}
+                  selectionColor="#A5D6A7"
+                  underlineColorAndroid="transparent"
+                  selectTextOnFocus={true}
+                />
+              </View>
+              <View style={styles.unitBadge}>
+                <Text style={styles.unitBadgeTextKn}>ಗುಂಟ</Text>
+                <Text style={styles.unitBadgeTextEn}>Guntas</Text>
+              </View>
             </View>
 
-            {(["N", "P", "K"] as const).map((nutrientKey) => {
-              const row = totals[nutrientKey];
-              const labelMap: Record<NpkLevel, string> = {
-                very_low: "ಅತ್ಯಂತ ಕಡಿಮೆ (V.L)",
-                low: "ಕಡಿಮೆ (L)",
-                medium: "ಮಧ್ಯಮ (M)",
-                high: "ಹೆಚ್ಚು (H)",
-                very_high: "ಅತ್ಯಂತ ಹೆಚ್ಚು (V.H)",
-              };
-              return (
-                <View key={nutrientKey} style={styles.resultRow}>
-                  <Text style={[styles.cellLabel, styles.cellColBorder]}>
-                    {nutrientKey === "N"
-                      ? "ನೈಟ್ರೋಜನ್ (N)"
-                      : nutrientKey === "P"
-                        ? "ಫಾಸ್ಫರಸ್ (P)"
-                        : "ಪೊಟಾಶಿಯಂ (K)"}
-                  </Text>
-                  <Text style={[styles.cellValue, styles.cellColBorder]}>
-                    {labelMap[row.level]}
-                  </Text>
-                  <Text style={styles.cellValue}>{row.kg}</Text>
-                </View>
-              );
-            })}
+            <Text style={styles.conversionHint}>
+              40 ಗುಂಟ = 1 ಎಕರೆ  •  40 Guntas = 1 Acre
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Baseline Table (40 Guntas / 1 Acre) ── */}
+        {baselineTotals && (
+          <View style={styles.resultCard}>
+            <Text style={styles.resultTitle}>
+              1 ಎಕರೆಗೆ (40 ಗುಂಟೆ) ಬೇಕಾಗುವ ಪೋಷಕಾಂಶಗಳು
+            </Text>
+            <Text style={styles.resultSubtitle}>
+              Recommendation for 1 Acre (Standard 40 Guntas)
+            </Text>
+            {renderNutrientTable(baselineTotals)}
+          </View>
+        )}
+
+        {/* ── Custom Table (entered area) ── */}
+        {customTotals && selectedGuntas !== 40 && (
+          <View style={[styles.resultCard, styles.customCard]}>
+            <Text style={[styles.resultTitle, { color: "#2E7D32" }]}>
+              ನಮೂದಿಸಿದ {selectedGuntas} ಗುಂಟೆಗಳಿಗೆ ಬೇಕಾಗುವ ಪೋಷಕಾಂಶಗಳು
+            </Text>
+            <Text style={styles.resultSubtitle}>
+              Recommendation for entered {selectedGuntas} Guntas
+            </Text>
+            {renderNutrientTable(customTotals)}
           </View>
         )}
 
@@ -212,39 +261,108 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  chipGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  chip: {
-    width: "48%",
+  /* ── Input Card ── */
+  inputCard: {
     backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#C8E6C9",
+    borderRadius: 16,
+    marginBottom: 18,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    overflow: "hidden",
+  },
+  inputHeader: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-  chipSelected: {
     backgroundColor: "#1B5E20",
-    borderColor: "#1B5E20",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    gap: 12,
   },
-  chipText: {
-    fontSize: 15,
+  inputHeaderIcon: {
+    fontSize: 22,
+  },
+  inputHeaderKn: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  inputHeaderEn: {
+    fontSize: 11,
+    color: "#A5D6A7",
+    marginTop: 1,
+  },
+  inputBody: {
+    padding: 20,
+  },
+  inputHintKn: {
+    fontSize: 14,
     color: "#333",
-    fontWeight: "500",
+    marginBottom: 2,
   },
-  chipTextEn: {
+  inputHintEn: {
     fontSize: 11,
     color: "#888",
-    marginTop: 2,
+    marginBottom: 16,
   },
-  chipTextSelected: {
-    color: "#fff",
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  inputWrapper: {
+    flex: 1,
+    height: 60,
+    borderWidth: 2,
+    borderColor: "#C8E6C9",
+    borderRadius: 12,
+    backgroundColor: "#F1F8E9",
+    justifyContent: "center",
+  },
+  textInput: {
+    flex: 1,
+    width: "100%",
+    fontSize: 24,
+    color: "#1B5E20",
+    fontWeight: "bold",
+    textAlign: "center",
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    includeFontPadding: false,
+    backgroundColor: "transparent",
+  },
+  unitBadge: {
+    backgroundColor: "#E8F5E9",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#C8E6C9",
+  },
+  unitBadgeTextKn: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#2E7D32",
+  },
+  unitBadgeTextEn: {
+    fontSize: 9,
+    color: "#66BB6A",
+    marginTop: 1,
+  },
+  conversionHint: {
+    fontSize: 11,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 12,
+    fontStyle: "italic",
+  },
+  /* ── Custom Card Highlight ── */
+  customCard: {
+    borderColor: "#1B5E20",
+    borderWidth: 1.5,
   },
   resultCard: {
     backgroundColor: "#fff",

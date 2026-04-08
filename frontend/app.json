@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SoilTrack",
+    "name": "LRI FERTILIZER",
     "slug": "SoilTrack",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,6 +8,8 @@
     "newArchEnabled": false,
     "icon": "./assets/app-icon.png",
     "splash": {
+      "image": "./assets/app-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
     "ios": {
@@ -35,7 +37,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SoilTrack App to access your camera for capturing LRI card images."
+          "cameraPermission": "Allow SoilTrack App to access your camera for capturing LRI card images.",
+          "recordAudioPermission": "Allow SoilTrack App to access your microphone for recording during card capture."
         }
       ],
       [

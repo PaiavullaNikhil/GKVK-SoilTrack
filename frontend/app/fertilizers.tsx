@@ -856,16 +856,30 @@ export default function FertilizersScreen() {
             </View>
           </View>
         )}
-        <View style={styles.backContainer}>
+        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { flex: 1, marginRight: 8 }]}
             onPress={() => {
               stopVoice();
               router.push("/home");
             }}
           >
-            <Text style={styles.backButtonText}>← ಮುಂಭಾಗಕ್ಕೆ</Text>
-            <Text style={styles.backButtonTextEn}>← Back to Home</Text>
+            <Text style={styles.backButtonText}>🏠 ಮುಖಪುಟ</Text>
+            <Text style={styles.backButtonTextEn}>Home</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.cropsButton, { flex: 1, marginLeft: 8 }]}
+            onPress={() => {
+              stopVoice();
+              router.push({
+                pathname: "/crops",
+                params: { npk },
+              });
+            }}
+          >
+            <Text style={styles.cropsButtonText}>🍱 ಬೆಳೆಗಳ ಪಟ್ಟಿ</Text>
+            <Text style={styles.cropsButtonTextEn}>Crops Menu</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -1116,8 +1130,10 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     lineHeight: 16,
   },
-  backContainer: {
+  buttonRow: {
+    flexDirection: "row",
     marginTop: 16,
+    justifyContent: "space-between",
   },
   backButton: {
     backgroundColor: "#1B5E20",
@@ -1139,6 +1155,31 @@ const styles = StyleSheet.create({
   backButtonTextEn: {
     fontSize: 12,
     color: "#A5D6A7",
+    textAlign: "center",
+    marginTop: 2,
+  },
+  cropsButton: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: "#1B5E20",
+  },
+  cropsButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1B5E20",
+    textAlign: "center",
+  },
+  cropsButtonTextEn: {
+    fontSize: 12,
+    color: "#4CAF50",
     textAlign: "center",
     marginTop: 2,
   },

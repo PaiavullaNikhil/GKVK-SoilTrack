@@ -167,7 +167,21 @@ export default function UploadScreen() {
         imageId: analysis?.image_id,
         nutrientCount: analysis?.nutrient_status?.length,
       });
-      setAnalysisResult(analysis);
+      const filteredNutrients = (analysis.nutrient_status || []).filter((n: any) => {
+        const name = (n.nutrient || "").toLowerCase();
+        return (
+          name.includes("oc") ||
+          name.includes("organic carbon") ||
+          name.includes("nitrogen") ||
+          name.includes("phosphorus") ||
+          name.includes("p2o5") ||
+          name.includes("potassium") ||
+          name.includes("k2o") ||
+          name.includes("k")
+        );
+      });
+
+      setAnalysisResult({ ...analysis, nutrient_status: filteredNutrients });
       setImageId(analysis.image_id);
 
       // Derive N, P, K fertility classes from OCR status
@@ -176,7 +190,8 @@ export default function UploadScreen() {
         P: "very_low" | "low" | "medium" | "high" | "very_high";
         K: "very_low" | "low" | "medium" | "high" | "very_high";
       } = { N: "medium", P: "medium", K: "medium" };
-      (analysis.nutrient_status || []).forEach((nutrient: any) => {
+
+      filteredNutrients.forEach((nutrient: any) => {
         const name = (nutrient.nutrient || "").toLowerCase();
         const statusKn: string = nutrient.status_kn || "";
         const level:
@@ -202,15 +217,14 @@ export default function UploadScreen() {
       });
       setNpkStatus(baseStatus);
 
-      // Speak Kannada summary covering ALL analysed nutrients (pH, EC, OC, N, P2O5, K2O, S, Zn, B, Fe, Mn, Cu...)
-      const list: any[] = analysis.nutrient_status || [];
-      if (list.length > 0) {
+      // Speak Kannada summary covering only the 4 specified nutrients
+      if (filteredNutrients.length > 0) {
         speakKn(
-          "ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ. ಈಗ pH ರಿಂದ ಕಾಪರ್ ವರೆಗೆ ಎಲ್ಲಾ ಅಂಶಗಳ ಸ್ಥಿತಿಯನ್ನು ಕೇಳಿ."
+          "ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ. ಮಣ್ಣಿನ ಫಲವತ್ತತೆ ಸ್ಥಿತಿಯನ್ನು ಕೇಳಿ."
         );
 
-        // Read every analysed nutrient once: "<Kannada-friendly name>: <Kannada status>"
-        list.forEach((nutrient: any) => {
+        // Read every filtered nutrient: "<Kannada-friendly name>: <Kannada status>"
+        filteredNutrients.forEach((nutrient: any) => {
           const rawNameKn: string = nutrient.nutrient_kn || "";
           const statusKn: string = nutrient.status_kn || "";
 
@@ -456,8 +470,7 @@ export default function UploadScreen() {
                       setIsStatusModalVisible(true);
                     }}
                   >
-                    <Text style={styles.statusText}>{nutrient.status_kn}</Text>
-                    <Text style={{ fontSize: 10, color: '#fff', opacity: 0.8, textAlign: 'center' }}>🔄 ಬದಲಿ (Edit)</Text>
+                    <Text style={styles.statusText}>{nutrient.status_kn} ▾</Text>
                   </TouchableOpacity>
                 </View>
               )
@@ -699,14 +712,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusText: {
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   recommendButton: {
     backgroundColor: "#1B5E20",

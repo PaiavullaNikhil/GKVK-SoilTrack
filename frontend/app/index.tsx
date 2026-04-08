@@ -11,7 +11,7 @@ export default function LandingScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ImageBackground
-        source={require("../assets/farm-photo.jpg")}
+        source={require("../assets/main-photo.png")}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -79,10 +79,10 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
   },
   logoContainer: {
-    width: 110,
-    height: 110,
+    width: 120,
+    height: 120,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 55,
+    borderRadius: 60,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 32,
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.4)",
   },
   logoImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 85,
+    height: 85,
+    borderRadius: 42.5,
   },
   titleContainer: {
     alignItems: "center",
