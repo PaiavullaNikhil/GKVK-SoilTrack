@@ -22,7 +22,11 @@ export default function LandingScreen() {
         <View style={styles.content}>
           {/* Logo/Icon */}
           <View style={styles.logoContainer}>
-            <Image source={require("../assets/app-icon.png")} style={styles.logoImage} />
+            <Image 
+              source={require("../assets/app-icon.png")} 
+              style={styles.logoImage} 
+              resizeMode="contain"
+            />
           </View>
 
           {/* Title Section */}
@@ -97,7 +101,6 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 85,
     height: 85,
-    borderRadius: 42.5,
   },
   titleContainer: {
     alignItems: "center",

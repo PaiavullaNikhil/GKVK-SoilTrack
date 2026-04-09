@@ -6,9 +6,9 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
-    "icon": "./assets/app-icon.png",
+    "icon": "./assets/app-icon-round.png",
     "splash": {
-      "image": "./assets/app-icon.png",
+      "image": "./assets/app-icon-round.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -28,7 +28,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app-icon.png",
+        "foregroundImage": "./assets/app-icon-round.png",
         "backgroundColor": "#FFFFFF"
       }
     },
