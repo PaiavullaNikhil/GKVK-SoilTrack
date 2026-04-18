@@ -133,7 +133,7 @@ const CROP_IMAGES: Record<string, any> = {
 };
 
 const getCropImage = (cropId: string) =>
-  CROP_IMAGES[cropId] || require("../assets/farmer_icon.png");
+  CROP_IMAGES[cropId] || require("../assets/app-icon.png");
 
 // NOTE: These cereals crops and their fertility data are mapped from the GKVK table
 // and kept here for later use in recommendation calculations.

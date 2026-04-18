@@ -1,14 +1,22 @@
 import * as Speech from "expo-speech";
 
-// Hard‑coded strict male voices from your device
+// Preferred male voice identifiers (may not exist on all devices)
 const KN_MALE_VOICE_ID = "kn-in-x-knd-local";
 const EN_MALE_VOICE_ID = "en-in-x-enc-local";
 
 let voiceEnabled = true;
 
-async function ensureVoices() {
-  // Voices are fixed; nothing dynamic to load any more.
-  return;
+async function getSafeVoiceId(preferredId: string | null) {
+  if (!preferredId) return null;
+
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    const match = voices.find((v) => v.identifier === preferredId);
+    return match ? preferredId : null;
+  } catch {
+    // If we can't query voices, just fall back to default
+    return null;
+  }
 }
 
 export function setVoiceEnabled(enabled: boolean) {
@@ -28,11 +36,13 @@ export function stopVoice() {
 
 export async function speakKn(text: string) {
   if (!voiceEnabled) return;
-  await ensureVoices();
+
+  const voiceId = await getSafeVoiceId(KN_MALE_VOICE_ID);
 
   Speech.speak(text, {
     language: "kn-IN",
-    voice: KN_MALE_VOICE_ID,
+    // If preferred voice is missing, let system choose a suitable Kannada voice
+    voice: voiceId ?? undefined,
     rate: 0.9,
     pitch: 1.0,
   });
@@ -40,11 +50,13 @@ export async function speakKn(text: string) {
 
 export async function speakEn(text: string) {
   if (!voiceEnabled) return;
-  await ensureVoices();
+
+  const voiceId = await getSafeVoiceId(EN_MALE_VOICE_ID);
 
   Speech.speak(text, {
     language: "en-IN",
-    voice: EN_MALE_VOICE_ID,
+    // If preferred voice is missing, let system choose a suitable English voice
+    voice: voiceId ?? undefined,
     rate: 0.95,
     pitch: 1.0,
   });

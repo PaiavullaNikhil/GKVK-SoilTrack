@@ -23,6 +23,17 @@ def log(msg):
     with open(DEBUG_LOG, "a", encoding="utf-8") as f:
         f.write(line)
     print(line, flush=True)
+
+
+def _to_dict(model_obj):
+    """Compatibility helper for Pydantic v1/v2 models."""
+    if hasattr(model_obj, "model_dump"):
+        return model_obj.model_dump()
+    if hasattr(model_obj, "dict"):
+        return model_obj.dict()
+    return model_obj
+
+
 from services.ocr_service import OCRService
 from services.analysis_service import AnalysisService
 from models import HealthResponse, UploadResponse, AnalysisResponse
@@ -123,16 +134,27 @@ async def analyze_image_direct(file: UploadFile = File(...)):
         # Perform OCR directly from image bytes (no file saving)
         ocr_result = ocr_service.extract_text(image_bytes)
         print(f"OCR result: {len(ocr_result)} chars extracted")
+        ocr_lines = [line.strip() for line in ocr_result.split("\n") if line.strip()]
+        log(f"OCR extracted lines: {len(ocr_lines)}")
+        for idx, line in enumerate(ocr_lines[:25], start=1):
+            log(f"OCR[{idx:02d}]: {line}")
+        if len(ocr_lines) > 25:
+            log(f"OCR preview truncated. Additional lines: {len(ocr_lines) - 25}")
 
         # Analyze soil data - extract values AND status text from OCR
         soil_data, raw_values, status_info = analysis_service.analyze_soil_card(ocr_result)
         print(f"Soil data parsed successfully")
         print(f"Raw values found: {len(raw_values)}")
         print(f"Status info (from OCR): {len(status_info)} items")
+        log(f"Stored soil_data: {_to_dict(soil_data)}")
+        log(f"Stored raw_values: {raw_values}")
+        log(f"Stored status_info: {status_info}")
 
         # Get nutrient status using OCR-extracted status text
         nutrient_status = analysis_service.get_nutrient_status(soil_data, raw_values, status_info)
         print(f"Nutrient status count: {len(nutrient_status)}")
+        nutrient_status_dump = [_to_dict(n) for n in nutrient_status]
+        log(f"Stored nutrient_status: {nutrient_status_dump}")
 
         return AnalysisResponse(
             success=True,

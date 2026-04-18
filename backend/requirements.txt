@@ -4,6 +4,6 @@ python-multipart
 pillow
 pydantic
 python-dotenv
-easyocr
 opencv-python
 numpy
+google-cloud-vision
