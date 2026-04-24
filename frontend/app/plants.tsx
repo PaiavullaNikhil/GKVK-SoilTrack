@@ -289,10 +289,10 @@ export default function PlantsScreen() {
                   <View key={nutrient} style={styles.resultRow}>
                     <Text style={[styles.cellLabel, styles.cellColBorder]}>
                       {nutrient === "N"
-                        ? "ನೈಟ್ರೋಜನ್ (N)"
+                        ? "ಸಾರಜನಕ (N)"
                         : nutrient === "P"
-                          ? "ಫಾಸ್ಫರಸ್ (P)"
-                          : "ಪೊಟಾಶಿಯಂ (K)"}
+                          ? "ರಂಜಕ (P)"
+                          : "ಪೊಟ್ಯಾಶ್ (K)"}
                     </Text>
                     <Text style={[styles.cellValue, styles.cellColBorder]}>
                       {gVal}
@@ -343,10 +343,10 @@ export default function PlantsScreen() {
                   <View key={nutrient} style={styles.resultRow}>
                     <Text style={[styles.cellLabel, styles.cellColBorder]}>
                       {nutrient === "N"
-                        ? "ನೈಟ್ರೋಜನ್ (N)"
+                        ? "ಸಾರಜನಕ (N)"
                         : nutrient === "P"
-                          ? "ಫಾಸ್ಫರಸ್ (P)"
-                          : "ಪೊಟಾಶಿಯಂ (K)"}
+                          ? "ರಂಜಕ (P)"
+                          : "ಪೊಟ್ಯಾಶ್ (K)"}
                     </Text>
                     <Text style={[styles.cellValue, styles.cellColBorder]}>
                       {grams}

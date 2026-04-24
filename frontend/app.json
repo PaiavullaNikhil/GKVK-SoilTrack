@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "icon": "./assets/app-icon-round.png",
     "splash": {
       "image": "./assets/app-icon-round.png",

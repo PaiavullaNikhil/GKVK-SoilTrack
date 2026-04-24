@@ -86,32 +86,32 @@ const FERTILIZER_LABELS: Record<
   Urea: {
     displayKn: "ಯೂರಿಯಾ",
     displayEn: "Urea",
-    speakKn: "ಯೂರಿಯಾ",
+    speakKn: "ಯೂರಿಯಾ ಗೊಬ್ಬರ",
   },
   SSP: {
-    displayKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್ / ಎಸ್ಎಸ್ಪಿ",
+    displayKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್",
     displayEn: "SSP (Single Super Phosphate)",
-    speakKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್",
+    speakKn: "ಸಿಂಗಲ್ ಸೂಪರ್ ಫಾಸ್ಫೇಟ್ ಗೊಬ್ಬರ",
   },
   MOP: {
-    displayKn: "ಮ್ಯುರಿಯೇಟ್ ಆಫ್ ಪೋಟ್ಯಾಶ್ / ಎಂಓಪಿ",
+    displayKn: "ಮ್ಯುರಿಯೇಟ್ ಆಫ್ ಪೋಟ್ಯಾಶ್",
     displayEn: "MOP (Muriate of Potash)",
     speakKn: "ಎಂಓಪಿ ಗೊಬ್ಬರ",
   },
   CAN: {
-    displayKn: "ಕ್ಯಾಲ್ಸಿಯಂ ಅಮೋನಿಯಂ ನೈಟ್ರೇಟ್ / ಸಿಎಎನ್",
+    displayKn: "ಕ್ಯಾಲ್ಸಿಯಂ ಅಮೋನಿಯಂ ನೈಟ್ರೇಟ್",
     displayEn: "CAN (Calcium Ammonium Nitrate)",
     speakKn: "ಸಿಎಎನ್ ಗೊಬ್ಬರ",
   },
   "Rock Phosphate": {
     displayKn: "ರಾಕ್ ಫಾಸ್ಫೇಟ್",
     displayEn: "Rock Phosphate",
-    speakKn: "ರಾಕ್ ಫಾಸ್ಫೇಟ್",
+    speakKn: "ರಾಕ್ ಫಾಸ್ಫೇಟ್ ಗೊಬ್ಬರ",
   },
   "Ammonium Sulphate": {
     displayKn: "ಅಮೋನಿಯಂ ಸಲ್ಫೇಟ್",
     displayEn: "Ammonium Sulphate",
-    speakKn: "ಅಮೋನಿಯಂ ಸಲ್ಫೇಟ್",
+    speakKn: "ಅಮೋನಿಯಂ ಸಲ್ಫೇಟ್ ಗೊಬ್ಬರ",
   },
 
   // Complex / mixed fertilizers
@@ -153,7 +153,7 @@ const FERTILIZER_LABELS: Record<
   "Ammonium Phosphate": {
     displayKn: "ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್",
     displayEn: "Ammonium Phosphate",
-    speakKn: "ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್",
+    speakKn: "ಅಮೋನಿಯಂ ಫಾಸ್ಫೇಟ್ ಗೊಬ್ಬರ",
   },
 };
 
@@ -408,70 +408,6 @@ export default function FertilizersScreen() {
       });
     })();
 
-    // 9. CAN + SSP + MOP
-    res.push({
-      name: "CAN + SSP + MOP",
-      fertilizers: [
-        { label: "CAN", amountKg: roundNonNeg(N_req / 0.26) },
-        { label: "SSP", amountKg: roundNonNeg(P_req / 0.16) },
-        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
-      ],
-    });
-
-    // 10. Ammonium Phosphate + Urea + MOP (20:20:0 equivalent)
-    (() => {
-      const complex = P_req / 0.20;
-      const nFrom = complex * 0.20;
-      const remainingN = N_req - nFrom;
-      res.push({
-        name: "Ammonium Phosphate + Urea + MOP",
-        fertilizers: [
-          { label: "Ammonium Phosphate", amountKg: round(complex) },
-          { label: "Urea", amountKg: round(remainingN / 0.46) },
-          { label: "MOP", amountKg: round(K_req / 0.60) },
-        ],
-      });
-    })();
-
-    // 11. Ammonium Sulphate + SSP + MOP
-    res.push({
-      name: "Ammonium Sulphate + SSP + MOP",
-      fertilizers: [
-        { label: "Ammonium Sulphate", amountKg: roundNonNeg(N_req / 0.21) },
-        { label: "SSP", amountKg: roundNonNeg(P_req / 0.16) },
-        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
-      ],
-    });
-
-    // 12. Urea + Rock Phosphate + MOP
-    res.push({
-      name: "Urea + Rock Phosphate + MOP",
-      fertilizers: [
-        { label: "Urea", amountKg: roundNonNeg(N_req / 0.46) },
-        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
-        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
-      ],
-    });
-
-    // 13. CAN + Rock Phosphate + MOP
-    res.push({
-      name: "CAN + Rock Phosphate + MOP",
-      fertilizers: [
-        { label: "CAN", amountKg: roundNonNeg(N_req / 0.26) },
-        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
-        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
-      ],
-    });
-
-    // 14. Ammonium Phosphate + Rock Phosphate + MOP
-    res.push({
-      name: "Ammonium Phosphate + Rock Phosphate + MOP",
-      fertilizers: [
-        { label: "Ammonium Phosphate", amountKg: roundNonNeg(P_req / 0.20) },
-        { label: "Rock Phosphate", amountKg: roundNonNeg(P_req / 0.30) },
-        { label: "MOP", amountKg: roundNonNeg(K_req / 0.60) },
-      ],
-    });
 
     return res;
   }, [requirements]);
@@ -496,19 +432,21 @@ export default function FertilizersScreen() {
           stopVoice();
           const combo = combos[next];
           const parts = combo.fertilizers
-            .map((f) => {
+            .map((f, i) => {
               const meta = getFertilizerMeta(f.label);
-              return `${meta.speakKn} ${formatNumber(
-                f.amountKg,
-                2
-              )} ಕಿಲೋ ಗ್ರಾಂ ಒಟ್ಟು`;
+              const isLast = i === combo.fertilizers.length - 1;
+              return `${meta.speakKn} ${parseFloat(
+                f.amountKg.toFixed(1)
+              )} ಕಿಲೋ ಗ್ರಾಂ${isLast ? " ಒಟ್ಟು" : ""}`;
             })
-            .join(", ");
+            .join(" ಮತ್ತು ");
 
-          const comboSpeakName = combo.fertilizers.reduce((acc, f) => {
-            const meta = getFertilizerMeta(f.label);
-            return acc.replace(f.label, meta.speakKn);
-          }, combo.name);
+          const comboSpeakName = combo.fertilizers
+            .reduce((acc, f) => {
+              const meta = getFertilizerMeta(f.label);
+              return acc.replace(f.label, meta.speakKn);
+            }, combo.name)
+            .replace(/\+/g, " ಮತ್ತು ");
 
           if (mode === "plants" && selectedPlants > 0) {
             speakKn(

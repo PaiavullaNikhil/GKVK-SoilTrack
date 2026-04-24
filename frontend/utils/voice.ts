@@ -34,12 +34,22 @@ export function stopVoice() {
   Speech.stop();
 }
 
+const PRONUNCIATION_FIXES: Record<string, string> = {
+  "ತೊಗರಿ": "ತೊಗರಿ",
+};
+
 export async function speakKn(text: string) {
   if (!voiceEnabled) return;
 
+  // Apply pronunciation fixes
+  let processedText = text;
+  Object.keys(PRONUNCIATION_FIXES).forEach((word) => {
+    processedText = processedText.replace(new RegExp(word, "g"), PRONUNCIATION_FIXES[word]);
+  });
+
   const voiceId = await getSafeVoiceId(KN_MALE_VOICE_ID);
 
-  Speech.speak(text, {
+  Speech.speak(processedText, {
     language: "kn-IN",
     // If preferred voice is missing, let system choose a suitable Kannada voice
     voice: voiceId ?? undefined,
