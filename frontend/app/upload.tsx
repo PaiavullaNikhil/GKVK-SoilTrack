@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { analyzeImageDirect } from "../services/api";
 import { speakKn, stopVoice } from "../utils/voice";
+import { addToHistory, deleteFromHistory, loadHistory } from "../utils/historyStorage";
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -33,8 +34,13 @@ export default function UploadScreen() {
   const [editingNutrientIndex, setEditingNutrientIndex] = useState<number | null>(null);
   const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
 
+  // History state
+  const [history, setHistory] = useState<any[]>([]);
+  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
+
   useEffect(() => {
     console.log("[UploadScreen] Mounted");
+    loadHistoryData();
     speakKn(
       "ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ ಕಾರ್ಡಿನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ."
     );
@@ -43,6 +49,35 @@ export default function UploadScreen() {
       stopVoice();
     };
   }, []);
+
+  const loadHistoryData = async () => {
+    const data = await loadHistory();
+    setHistory(data);
+  };
+
+  const saveToHistory = async (result: any, npk: any) => {
+    const newEntry = {
+      id: Date.now().toString(),
+      date: new Date().toLocaleDateString(),
+      result,
+      npk,
+    };
+    const updated = await addToHistory(newEntry);
+    setHistory(updated);
+  };
+
+  const deleteHistoryItem = async (id: string) => {
+    const updated = await deleteFromHistory(id);
+    setHistory(updated);
+  };
+
+  const selectFromHistory = (item: any) => {
+    setAnalysisResult(item.result);
+    setNpkStatus(item.npk);
+    setSelectedImage(null); // Clear image as we are using historical values
+    setIsHistoryModalVisible(false);
+    Alert.alert("ಯಶಸ್ವಿ / Success", "ಹಳೆಯ ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಲೋಡ್ ಮಾಡಲಾಗಿದೆ\nPrevious report loaded successfully");
+  };
 
   useEffect(() => {
     console.log("[UploadScreen] selectedImage changed", { selectedImage });
@@ -74,7 +109,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
       });
@@ -122,7 +157,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false, // no crop UI
         quality: 0.8,
       });
@@ -216,6 +251,7 @@ export default function UploadScreen() {
         if (name.includes("potassium")) baseStatus.K = level;
       });
       setNpkStatus(baseStatus);
+      saveToHistory({ ...analysis, nutrient_status: filteredNutrients }, baseStatus);
 
       // Speak Kannada summary covering only the 4 specified nutrients
       if (filteredNutrients.length > 0) {
@@ -367,6 +403,32 @@ export default function UploadScreen() {
     }
   };
 
+  const renderNutrientLabel = (name: string) => {
+    if (!name) return null;
+    const parts = name.split(/(P2O5|K2O)/g);
+    return (
+      <Text style={styles.nutrientName}>
+        {parts.map((part, index) => {
+          if (part === "P2O5") {
+            return (
+              <Text key={index}>
+                P<Text style={styles.subscript}>2</Text>O<Text style={styles.subscript}>5</Text>
+              </Text>
+            );
+          }
+          if (part === "K2O") {
+            return (
+              <Text key={index}>
+                K<Text style={styles.subscript}>2</Text>O
+              </Text>
+            );
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Text>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -410,6 +472,17 @@ export default function UploadScreen() {
             <View>
               <Text style={styles.actionText}>ಗ್ಯಾಲರಿ</Text>
               <Text style={styles.actionTextEn}>Gallery</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => setIsHistoryModalVisible(true)}
+          >
+            <Text style={styles.actionIcon}>📜</Text>
+            <View>
+              <Text style={styles.actionText}>ಹಳೆಯ ವರದಿ</Text>
+              <Text style={styles.actionTextEn}>History</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -458,7 +531,7 @@ export default function UploadScreen() {
               (nutrient: any, index: number) => (
                 <View key={index} style={styles.nutrientRow}>
                   <View style={styles.nutrientInfo}>
-                    <Text style={styles.nutrientName}>{nutrient.nutrient_kn}</Text>
+                    {renderNutrientLabel(nutrient.nutrient_kn)}
                   </View>
                   <TouchableOpacity
                     style={[
@@ -536,6 +609,65 @@ export default function UploadScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* History Modal */}
+      <Modal
+        visible={isHistoryModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsHistoryModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setIsHistoryModalVisible(false)}
+        >
+          <View style={[styles.modalContent, styles.historyModalContent]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ಹಳೆಯ ವರದಿಗಳು / Previous Reports</Text>
+            </View>
+            
+            <ScrollView style={styles.optionsList}>
+              {history.length > 0 ? (
+                history.map((item, idx) => (
+                  <View key={item.id} style={styles.historyItem}>
+                    <TouchableOpacity 
+                      style={styles.historyItemMain}
+                      onPress={() => selectFromHistory(item)}
+                    >
+                      <View style={styles.historyItemHeader}>
+                        <Text style={styles.historyDate}>{item.date}</Text>
+                      </View>
+                      <View style={styles.historySummary}>
+                        <Text style={styles.summaryText}>
+                          N: {item.npk.N.replace("_", " ")} | P: {item.npk.P.replace("_", " ")} | K: {item.npk.K.replace("_", " ")}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteBtn}
+                      onPress={() => deleteHistoryItem(item.id)}
+                    >
+                      <Text style={styles.deleteBtnText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyHistory}>
+                  <Text style={styles.emptyHistoryText}>ಯಾವುದೇ ಹಳೆಯ ವರದಿಗಳಿಲ್ಲ</Text>
+                  <Text style={styles.emptyHistoryTextEn}>No previous reports found</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity 
+              style={styles.cancelBtn}
+              onPress={() => setIsHistoryModalVisible(false)}
+            >
+              <Text style={styles.cancelBtnText}>ಮುಚ್ಚಿ / Close</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -600,30 +732,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionButton: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    flex: 1,
+    flexDirection: "column",
     alignItems: "center",
-    width: "47%",
-    elevation: 1,
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    marginHorizontal: 3,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.1,
     shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#E8F5E9",
   },
   actionIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 24,
+    marginBottom: 4,
   },
   actionText: {
-    fontSize: 15,
+    fontSize: 13,
     color: "#333",
-    fontWeight: "500",
+    fontWeight: "600",
+    textAlign: "center",
   },
   actionTextEn: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#888",
-    marginTop: 2,
+    marginTop: 1,
+    textAlign: "center",
   },
   uploadButton: {
     backgroundColor: "#1B5E20",
@@ -705,6 +845,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     color: "#333",
+  },
+  subscript: {
+    fontSize: 10,
+    lineHeight: 20,
   },
   nutrientValue: {
     fontSize: 13,
@@ -845,6 +989,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1B5E20',
+    textAlign: 'center',
   },
   optionsList: {
     paddingVertical: 10,
@@ -885,6 +1030,63 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  historyModalContent: {
+    maxHeight: "80%",
+  },
+  historyItem: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    overflow: "hidden",
+  },
+  historyItemMain: {
+    flex: 1,
+    padding: 12,
+  },
+  historyItemHeader: {
+    marginBottom: 4,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: "#1B5E20",
+    fontWeight: "600",
+  },
+  historySummary: {
+    marginTop: 2,
+  },
+  summaryText: {
+    fontSize: 11,
+    color: "#666",
+    textTransform: "capitalize",
+  },
+  deleteBtn: {
+    backgroundColor: "#FFEBEE",
+    width: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    borderLeftWidth: 1,
+    borderLeftColor: "#FFCDD2",
+  },
+  deleteBtnText: {
+    fontSize: 18,
+  },
+  emptyHistory: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "600",
+  },
+  emptyHistoryTextEn: {
+    fontSize: 12,
+    color: "#BBB",
+    marginTop: 4,
   },
 });
 

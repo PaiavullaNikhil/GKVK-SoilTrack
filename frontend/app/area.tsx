@@ -100,6 +100,33 @@ export default function AreaScreen() {
     [cropMeta, cropId, ageKey, parsedNpkStatus, selectedGuntas]
   );
 
+
+  const renderNutrientLabel = (name: string) => {
+    if (!name) return null;
+    const parts = name.split(/(P2O5|K2O)/g);
+    return (
+      <Text style={styles.cellLabel}>
+        {parts.map((part, index) => {
+          if (part === "P2O5") {
+            return (
+              <Text key={index}>
+                P<Text style={styles.subscript}>2</Text>O<Text style={styles.subscript}>5</Text>
+              </Text>
+            );
+          }
+          if (part === "K2O") {
+            return (
+              <Text key={index}>
+                K<Text style={styles.subscript}>2</Text>O
+              </Text>
+            );
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Text>
+    );
+  };
+
   const renderNutrientTable = (totalsData: any) => {
     return (
       <>
@@ -130,13 +157,15 @@ export default function AreaScreen() {
           };
           return (
             <View key={nutrientKey} style={styles.resultRow}>
-              <Text style={[styles.cellLabel, styles.cellColBorder]}>
-                {nutrientKey === "N"
-                  ? "ನೈಟ್ರೋಜನ್ (N)"
-                  : nutrientKey === "P"
-                  ? "ಫಾಸ್ಫರಸ್ (P)"
-                  : "ಪೊಟಾಶಿಯಂ (K)"}
-              </Text>
+              <View style={[styles.cellLabelContainer, styles.cellColBorder]}>
+                {renderNutrientLabel(
+                  nutrientKey === "N"
+                    ? "ಸಾರಜನಕ (N)"
+                    : nutrientKey === "P"
+                    ? "ರಂಜಕ (P2O5)"
+                    : "ಪೊಟ್ಯಾಶ್ (K2O)"
+                )}
+              </View>
               <Text style={[styles.cellValue, styles.cellColBorder]}>
                 {labelMap[row.level as NpkLevel]}
               </Text>
@@ -408,10 +437,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#555",
   },
-  cellLabel: {
+  cellLabelContainer: {
     flex: 1,
+    paddingVertical: 4,
+  },
+  cellLabel: {
     fontSize: 13,
     color: "#333",
+  },
+  subscript: {
+    fontSize: 9,
+    lineHeight: 18,
   },
   cellValue: {
     flex: 1,
