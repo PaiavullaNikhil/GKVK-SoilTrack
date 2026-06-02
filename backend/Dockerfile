@@ -37,11 +37,7 @@ EXPOSE 7860
 
 # Health check (uses Python stdlib only)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import urllib.request, urllib.error; import sys; \
-import time; \
-url = 'http://localhost:7860/health'; \
-req = urllib.request.Request(url); \
-try:\n    urllib.request.urlopen(req, timeout=5)\nexcept Exception:\n    sys.exit(1)" || exit 1
+  CMD python -c "import urllib.request, os; urllib.request.urlopen(f'http://localhost:{os.getenv(\"PORT\", \"7860\")}/health', timeout=5)"
 
-# Run server on port 7860
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run server on port specified by PORT env var, or default to 7860 for Hugging Face Spaces
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-7860}"]
