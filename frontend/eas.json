@@ -26,19 +26,19 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
+        "EXPO_PUBLIC_API_URL": "https://lri-fetilizer-be-732318741320.asia-south1.run.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "ios": {
         "buildConfiguration": "Release"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://rishven-soiltrack.hf.space"
+        "EXPO_PUBLIC_API_URL": "https://lri-fetilizer-be-732318741320.asia-south1.run.app"
       }
     }
   },
