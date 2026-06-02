@@ -75,15 +75,20 @@ class OCRService:
             except Exception as e:
                 logger.error(f"OCRService: Failed to load Google credentials: {e}")
         
-        # Initialize client with credentials if found
-        if creds:
-            self._client = vision.ImageAnnotatorClient(credentials=creds)
-            print("OCRService: Successfully initialized with credentials from .env", flush=True)
-        else:
-            # Fallback to default (looks for GOOGLE_APPLICATION_CREDENTIALS file path in env)
-            self._client = vision.ImageAnnotatorClient()
-            print("OCRService: No credentials in .env, using default ADC", flush=True)
-            logger.warning("OCRService: No valid credentials found in .env, falling back to default ADC")
+        # Safe client initialization: prevents server crashing on startup if credentials are missing
+        self._client = None
+        try:
+            if creds:
+                self._client = vision.ImageAnnotatorClient(credentials=creds)
+                print("OCRService: Successfully initialized with credentials from .env", flush=True)
+            else:
+                # Fallback to default (looks for GOOGLE_APPLICATION_CREDENTIALS file path in env)
+                self._client = vision.ImageAnnotatorClient()
+                print("OCRService: No credentials in .env, using default ADC", flush=True)
+                logger.info("OCRService: Initialized using default Application Default Credentials (ADC)")
+        except Exception as e:
+            print(f"OCRService WARNING: Failed to initialize Google Vision client: {e}", flush=True)
+            logger.warning(f"OCRService: Failed to initialize Google Vision client: {e}. OCR functions will not be available.")
 
         # More variants improve low-quality OCR but cost extra API calls.
         self.max_ocr_passes = 3
@@ -304,6 +309,11 @@ class OCRService:
 
     def _run_document_text_detection(self, image_bytes: bytes) -> Any:
         """Run DOCUMENT_TEXT_DETECTION with language hints and API error handling."""
+        if not self._client:
+            raise RuntimeError(
+                "Google Cloud Vision API client is not initialized. "
+                "Please configure valid GOOGLE_APPLICATION_CREDENTIALS in your environment."
+            )
         try:
             image = vision.Image(content=image_bytes)
             image_context = vision.ImageContext(language_hints=self.language_hints)
