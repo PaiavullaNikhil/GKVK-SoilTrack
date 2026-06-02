@@ -308,6 +308,8 @@ async def privacy_policy():
             <h2>2. Data Collection and Storage</h2>
             <p><strong>We do not collect, store, or sell any personal data.</strong></p>
             <ul>
+                <li><strong>Soil Health Card Photos:</strong> Images you take or upload are securely sent to our server solely for real-time text analysis. They are processed ephemerally in-memory and are immediately deleted. No image files are ever permanently saved or stored on our servers.</li>
+                <li><strong>Extracted Soil Data:</strong> While the image file itself is NOT stored, the parsed soil analysis values (OC, nitrogen, Phosphorus, Notassium) are saved locally in the secure storage of your mobile device so you can access your historical reports offline. This data is not uploaded or stored on our servers.</li>
                 <li>No personal identification details (like name, email, or phone number) are required to use the App.</li>
                 <li>No usage tracking or analytics libraries are integrated to build advertising profiles.</li>
             </ul>
