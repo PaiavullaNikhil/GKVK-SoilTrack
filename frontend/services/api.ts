@@ -25,9 +25,102 @@ const apiClient = axios.create({
 // Log the initial API URL for debugging
 console.log("[API] Initial API URL:", API_URL);
 
+// Keep track of active API requests (excluding the health check itself) to know if backend is busy/running
+let activeRequestsCount = 0;
+
+// Connection state observers/listeners
+type ConnectionListener = (status: boolean | null) => void;
+const listeners = new Set<ConnectionListener>();
+let lastKnownStatus: boolean | null = null;
+let isPolling = false;
+let pollIntervalId: any = null;
+
+// Resilience: require multiple consecutive failures before marking disconnected
+const FAILURE_THRESHOLD = 5;
+let consecutiveFailures = 0;
+
+export function subscribeToConnection(listener: ConnectionListener) {
+  listeners.add(listener);
+  // Send the current status immediately
+  listener(lastKnownStatus);
+  
+  // Start polling if not already started
+  startConnectionPolling();
+
+  return () => {
+    listeners.delete(listener);
+    // Stop polling if no more active observers
+    if (listeners.size === 0 && pollIntervalId) {
+      clearInterval(pollIntervalId);
+      pollIntervalId = null;
+      isPolling = false;
+    }
+  };
+}
+
+export function getLastKnownConnectionStatus(): boolean | null {
+  return lastKnownStatus;
+}
+
+// Force a manual refresh of the health status
+export async function refreshConnectionStatus(): Promise<boolean> {
+  const healthy = await checkHealth();
+  if (healthy) {
+    // Success: immediately mark as connected, reset failure counter
+    consecutiveFailures = 0;
+    broadcastStatus(true);
+  } else {
+    // Failure: only mark as disconnected after FAILURE_THRESHOLD consecutive failures
+    consecutiveFailures++;
+    if (consecutiveFailures >= FAILURE_THRESHOLD) {
+      broadcastStatus(false);
+    }
+    // Otherwise keep the last known good status (stay blue)
+  }
+  return healthy;
+}
+
+function broadcastStatus(status: boolean | null) {
+  lastKnownStatus = status;
+  listeners.forEach((listener) => listener(status));
+}
+
+// Keep updateConnectionStatus as a direct setter (used by active-request shortcut)
+function updateConnectionStatus(status: boolean | null) {
+  if (status === true) {
+    consecutiveFailures = 0;
+  }
+  broadcastStatus(status);
+}
+
+function startConnectionPolling() {
+  if (isPolling) return;
+  isPolling = true;
+
+  // Run initial check immediately if we don't have a status yet
+  if (lastKnownStatus === null) {
+    refreshConnectionStatus();
+  }
+
+  // Poll every 30 seconds (reduced frequency to avoid stressing HF Spaces)
+  pollIntervalId = setInterval(async () => {
+    // If there are active API requests in progress, we know the backend is communicating and running.
+    // We can assume healthy status and skip the health check to avoid blocking or timeout errors.
+    if (activeRequestsCount > 0) {
+      updateConnectionStatus(true);
+      return;
+    }
+    await refreshConnectionStatus();
+  }, 30000);
+}
+
 // Global request/response logging for debugging (including production)
 apiClient.interceptors.request.use(
   (config) => {
+    const isHealthCheck = config.url === ENDPOINTS.health;
+    if (!isHealthCheck) {
+      activeRequestsCount++;
+    }
     const method = config.method?.toUpperCase();
     console.log("[API][Request]", {
       method,
@@ -35,6 +128,7 @@ apiClient.interceptors.request.use(
       timeout: config.timeout,
       headers: config.headers,
       isFormData: config.data instanceof FormData,
+      activeRequests: activeRequestsCount,
     });
     return config;
   },
@@ -46,29 +140,49 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
+    const isHealthCheck = response.config?.url === ENDPOINTS.health;
+    if (!isHealthCheck) {
+      activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+      // Any successful API response proves the backend is alive
+      updateConnectionStatus(true);
+    }
     console.log("[API][Response]", {
       url: response.config?.url,
       status: response.status,
       dataType: typeof response.data,
+      activeRequests: activeRequestsCount,
     });
     return response;
   },
   (error) => {
+    const isHealthCheck = error.config?.url === ENDPOINTS.health;
+    if (!isHealthCheck) {
+      activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+    }
+
+    // Silently swallow health check errors - they are handled by the polling logic
+    if (isHealthCheck) {
+      return Promise.reject(error);
+    }
+
+    // Use console.warn (not console.error) to avoid triggering React Native RedBox
     if (error.response) {
-      console.error("[API][Response][Error]", {
+      console.warn("[API][Response][Error]", {
         url: error.response.config?.url,
         status: error.response.status,
         data:
           typeof error.response.data === "string"
             ? error.response.data
             : JSON.stringify(error.response.data),
+        activeRequests: activeRequestsCount,
       });
     } else if (error.request) {
-      console.error("[API][Response][NoResponse]", {
+      console.warn("[API][Response][NoResponse]", {
         url: error.config?.url,
+        activeRequests: activeRequestsCount,
       });
     } else {
-      console.error("[API][Response][SetupError]", error.message);
+      console.warn("[API][Response][SetupError]", error.message);
     }
     return Promise.reject(error);
   }
@@ -80,11 +194,11 @@ apiClient.interceptors.response.use(
 export async function checkHealth(): Promise<boolean> {
   try {
     const response = await apiClient.get(ENDPOINTS.health, {
-      timeout: 5000, // Faster timeout for health check
+      timeout: 10000, // Generous timeout for HF Spaces cold starts
     });
-    return response.data.status === "healthy";
-  } catch (error: any) {
-    console.error("Health check failed:", error?.message || error);
+    return response.data.status === "healthy" || response.data.status === "ok";
+  } catch {
+    // Silently fail - polling logic handles the retry/threshold
     return false;
   }
 }

@@ -16,15 +16,15 @@ class AnalysisService:
     # Patterns to match parameter names (English and Kannada)
     PARAM_PATTERNS = {
         "ph": [r"pH", r"\(pH\)", r"ಪಿ\.?ಹೆಚ್", r"ರಸಸಾರ"],
-        "ec": [r"EC", r"E\.?C", r"\(EC\)", r"\(E\.?C\)", r"ಇ\.?ಸಿ", r"ವಿದ್ಯುತ್", r"ವಾಹಕತೆ"],
-        "organic_carbon": [r"OC", r"\(OC\)", r"\(?C\)", r"ಸಾವಯವ", r"ಇಂಗಾಲ", r"Organic"],
+        "ec": [r"EC", r"E\.?C", r"\(EC\)", r"\(E\.?C\)", r"ಇ\.?ಸಿ", r"ವಿದ್ಯುತ್", r"ವಾಹಕತೆ", r"Electrical", r"Conductivity"],
+        "organic_carbon": [r"OC", r"\(OC\)", r"\(?C\)", r"ಸಾವಯವ", r"ಇಂಗಾಲ", r"Organic", r"Carbon"],
         "nitrogen": [r"\bN\b", r"\(N\)", r"TN", r"ಸಾರಜನಕ", r"Nitrogen"],
-        "phosphorus": [r"P2O5", r"P205", r"P2o5", r"\(P2", r"ರಂಜಕ", r"Phosphorus"],
-        "potassium": [r"K2O", r"K20", r"\(K2", r"ಪೊಟ್ಯಾಶ್", r"ಪೊಟ್ಯಾಷ್", r"Potassium"],
-        "sulphur": [r"\bS\b", r"\(S\)", r"ಗಂಧಕ", r"Sulphur"],
+        "phosphorus": [r"P2O5", r"P205", r"P2o5", r"\(P2", r"ರಂಜಕ", r"Phosphorus", r"Phosphate"],
+        "potassium": [r"K2O", r"K20", r"\(K2", r"ಪೊಟ್ಯಾಶ್", r"ಪೊಟ್ಯಾಷ್", r"Potassium", r"Potash"],
+        "sulphur": [r"\bS\b", r"\(S\)", r"ಗಂಧಕ", r"Sulphur", r"Sulfur"],
         "zinc": [r"Zn", r"ZR", r"\(Zn\)", r"\(ZR\)", r"ಸತು", r"Zinc"],
         "boron": [r"\bB\b", r"\(B\)", r"ಬೋರಾನ್", r"Boron"],
-        "iron": [r"Fe", r"\(Fe\)", r"ಕಬ್ಬಿಣ", r"Iron"],
+        "iron": [r"Fe", r"\(Fe\)", r"ಕಬಿನ", r"ಕಬಿಣ", r"ಕಬ್ದಿಣ", r"ಕಬ್ದಿಣ್", r"ಕಬ್ಬಿಣ", r"Iron"],
         "manganese": [r"Mn", r"\(Mn\)", r"ಮ್ಯಾಂಗನೀಸ್", r"Manganese"],
         "copper": [r"Cu", r"\(Cu\)", r"ತಾಮ್ರ", r"Copper"],
     }
@@ -46,6 +46,31 @@ class AnalysisService:
         "ಅತಿ ಹೆಚ್ಚು": ("#16A34A", "Very High"),
         # Generic sufficient
         "ಸಾಕಷ್ಟು": ("#10B981", "Sufficient"),
+    }
+
+    # English status keywords mapped to (status_kn, color)
+    ENGLISH_STATUS_MAP = {
+        r"\bhighly\s+acidic\b": ("ಅಧಿಕ ಆಮ್ಲೀಯ", "#F97316"),
+        r"\bslightly\s+acidic\b": ("ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", "#F59E0B"),
+        r"\bmoderately\s+acidic\b": ("ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", "#F59E0B"),
+        r"\bacidic\b": ("ಆಮ್ಲೀಯ", "#F97316"),
+        r"\bneutral\b": ("ತಟಸ್ಥ", "#10B981"),
+        r"\bslightly\s+alkaline\b": ("ಸ್ವಲ್ಪ ಕ್ಷಾರೀಯ", "#F59E0B"),
+        r"\bmoderately\s+alkaline\b": ("ಸ್ವಲ್ಪ ಕ್ಷಾರೀಯ", "#F59E0B"),
+        r"\balkaline\b": ("ಕ್ಷಾರೀಯ", "#F59E0B"),
+        r"\bsalt\s+free\b": ("ಲವಣ ರಹಿತ", "#10B981"),
+        r"\bnon\s+saline\b": ("ಲವಣ ರಹಿತ", "#10B981"),
+        r"\bnormal\b": ("ಸಾಮಾನ್ಯ", "#10B981"),
+        r"\bsaline\b": ("ಲವಣಯುಕ್ತ", "#EF4444"),
+        r"\bvery\s+low\b": ("ಅತಿ ಕಡಿಮೆ", "#B91C1C"),
+        r"\blow\b": ("ಕಡಿಮೆ", "#EF4444"),
+        r"\bmedium\b": ("ಮಧ್ಯಮ", "#F59E0B"),
+        r"\bvery\s+high\b": ("ಅತಿ ಹೆಚ್ಚು", "#16A34A"),
+        r"\bhigh\b": ("ಹೆಚ್ಚು", "#10B981"),
+        r"\bsufficient\b": ("ಸಾಕಷ್ಟು", "#10B981"),
+        r"\bdeficient\b": ("ಕೊರತೆ", "#EF4444"),
+        r"\bsatisfactory\b": ("ಸಾಕಷ್ಟು", "#10B981"),
+        r"\badequate\b": ("ಸಾಕಷ್ಟು", "#10B981"),
     }
 
     NUTRIENT_KN = {
@@ -97,9 +122,18 @@ class AnalysisService:
 
     def _find_status(self, text: str) -> Tuple[str, str, str]:
         """Find status keyword in text and return (status_kn, color, status_en)."""
+        # 1. Try to find Kannada status keyword first
         for status_kn, (color, status_en) in self.STATUS_MAP.items():
             if status_kn in text:
                 return (status_kn, color, status_en)
+        
+        # 2. Try to find English status keyword using regular expressions
+        for pattern, (status_kn, color) in self.ENGLISH_STATUS_MAP.items():
+            if re.search(pattern, text, re.IGNORECASE):
+                # Resolve English status string back from the mapping
+                status_en = pattern.replace(r"\b", "").replace(r"\s+", " ").title()
+                return (status_kn, color, status_en)
+                
         return ("ಪತ್ತೆಯಾಗಿಲ್ಲ", "#6B7280", "Not Found")
 
     def _extract_value(self, text: str) -> str:
@@ -267,7 +301,7 @@ class AnalysisService:
             # If status not found in OCR, calculate from value
             if status_kn == "ಪತ್ತೆಯಾಗಿಲ್ಲ" and value:
                 parsed_val = self._parse_value(value)
-                status_kn, color, _ = self._get_status_from_value(param, parsed_val)
+                status_kn, color, status_en = self._get_status_from_value(param, parsed_val)
             
             found[param] = {
                 'value': value,
@@ -290,11 +324,12 @@ class AnalysisService:
                 
                 setattr(soil_data, param, round(self._parse_value(raw), 2) if raw else None)
                 raw_values[param] = raw
-                status_info[param] = ("ocr", color, status_kn)
+                status_en = d.get('status_en') or "Not Found"
+                status_info[param] = ("ocr", color, status_kn, status_en)
                 
                 print(f"  {i+1:02d}. {param:15s}: {raw:12s} | [status]", flush=True)
             else:
-                status_info[param] = ("missing", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ")
+                status_info[param] = ("missing", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ", "Not Found")
                 print(f"  {i+1:02d}. {param:15s}: NOT FOUND", flush=True)
         
         print(f"{'='*60}\n", flush=True)
@@ -308,7 +343,13 @@ class AnalysisService:
         for param in self.PARAM_ORDER:
             value = getattr(soil_data, param, None)
             raw = raw_values.get(param)
-            _, color, status_kn = status_info.get(param, ("", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ"))
+            # Handle tuple unpacking safely to support both 3-tuple and 4-tuple status formats
+            status_tup = status_info.get(param, ("", "#6B7280", "ಪತ್ತೆಯಾಗಿಲ್ಲ", "Not Found"))
+            if len(status_tup) == 3:
+                _, color, status_kn = status_tup
+                status_en = "Not Found"
+            else:
+                _, color, status_kn, status_en = status_tup
             
             result.append(NutrientStatus(
                 nutrient=param.replace("_", " ").title(),
@@ -316,7 +357,7 @@ class AnalysisService:
                 value=value,
                 value_raw=raw,
                 unit=self.UNITS.get(param, ""),
-                status="ocr",
+                status=status_en,
                 status_kn=status_kn,
                 color=color,
             ))

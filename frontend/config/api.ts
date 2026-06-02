@@ -19,7 +19,7 @@ export const API_TIMEOUT = 60000;
 
 // API endpoints
 export const ENDPOINTS = {
-  health: "/",
+  health: "/health",
   crops: "/crops",
   upload: "/upload",
   analyze: "/analyze",
