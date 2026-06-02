@@ -295,19 +295,15 @@ export default function UploadScreen() {
         speakKn("ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ.");
       }
     } catch (error: any) {
-      console.error("[UploadScreen] Upload/Analysis error:", error);
-      // Log detailed error info
+      console.warn("[UploadScreen] Upload/Analysis error:", error?.message || error);
+      // Log detailed error info quietly (no visible error to user)
       if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data));
+        console.warn("Response status:", error.response.status);
       } else if (error.request) {
-        console.error("No response received - network error");
+        console.warn("No response received - network error");
       }
-      Alert.alert(
-        "ದೋಷ / Error",
-        `ಚಿತ್ರವನ್ನು ವಿಶ್ಲೇಷಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ\nFailed to analyze image\n\n${error.response?.data?.detail || error.message || "Network error. Please check if backend is running."}`,
-        [{ text: "ಸರಿ / OK" }]
-      );
+      // Non-blocking: just speak a brief Kannada message instead of showing an alert
+      speakKn("ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.");
     } finally {
       setIsUploading(false);
       setIsAnalyzing(false);
@@ -332,6 +328,7 @@ export default function UploadScreen() {
     const updatedNutrients = [...analysisResult.nutrient_status];
     updatedNutrients[editingNutrientIndex] = {
       ...updatedNutrients[editingNutrientIndex],
+      status: option.en,
       status_kn: option.kn,
       color: option.color,
     };
@@ -543,7 +540,10 @@ export default function UploadScreen() {
                       setIsStatusModalVisible(true);
                     }}
                   >
-                    <Text style={styles.statusText}>{nutrient.status_kn} ▾</Text>
+                    <Text style={styles.statusText}>
+                      {nutrient.status_kn}
+                      {nutrient.status && nutrient.status !== "ocr" ? ` (${nutrient.status})` : ""} ▾
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )

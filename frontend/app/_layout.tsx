@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
-import { checkHealth } from "../services/api";
+import { subscribeToConnection } from "../services/api";
 
 // Custom header title component with Kannada and English
 function HeaderTitle({ kannada, english }: { kannada: string; english: string }) {
@@ -20,19 +20,10 @@ function ConnectionDot() {
   const [ok, setOk] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      try {
-        const healthy = await checkHealth();
-        if (mounted) setOk(healthy);
-      } catch {
-        if (mounted) setOk(false);
-      }
-    };
-    run();
-    return () => {
-      mounted = false;
-    };
+    const unsubscribe = subscribeToConnection((status) => {
+      setOk(status);
+    });
+    return unsubscribe;
   }, []);
 
   const iconColor =

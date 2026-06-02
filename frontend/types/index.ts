@@ -15,7 +15,7 @@ export interface NutrientStatus {
   value: number | null;
   value_raw: string | null;  // Original string like "5.0-5.5"
   unit: string;
-  status: "low" | "medium" | "high" | "sufficient" | "unknown";
+  status: string;
   status_kn: string;
   color: string;
 }
