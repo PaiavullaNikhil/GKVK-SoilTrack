@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import uuid
 import shutil
 from pathlib import Path
@@ -174,6 +174,161 @@ async def analyze_image_direct(file: UploadFile = File(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - LRI FERTILIZER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1b4332;
+            --primary-light: #2d6a4f;
+            --accent: #52b788;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --text-muted: #475569;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        header {
+            text-align: center;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+        }
+        .logo-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        h1 {
+            font-size: 2.2rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .last-updated {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        h2 {
+            font-size: 1.4rem;
+            color: var(--primary-light);
+            margin: 30px 0 15px 0;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 20px;
+            background-color: var(--accent);
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        p {
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+        ul {
+            margin-bottom: 20px;
+            padding-left: 20px;
+            color: var(--text-muted);
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        @media (max-width: 640px) {
+            body {
+                padding: 20px 10px;
+            }
+            .container {
+                padding: 25px 15px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-icon">🌱</div>
+            <h1>LRI FERTILIZER</h1>
+            <p>Privacy Policy</p>
+            <div class="last-updated">Last Updated: June 2, 2026</div>
+        </header>
+
+        <section>
+            <p>This Privacy Policy describes how the <strong>LRI FERTILIZER</strong> mobile application ("App") handles your data. The App is developed to assist in soil health card analysis and provide crop-specific fertilizer recommendations.</p>
+
+            <h2>1. Information We Access & Process</h2>
+            <p>To provide soil health card analysis, the App requires access to specific device features. We prioritize your privacy and only process the minimal data required:</p>
+            <ul>
+                <li><strong>Camera Access:</strong> Used exclusively to capture images of your printed Soil Health Cards for Optical Character Recognition (OCR).</li>
+                <li><strong>Photo Library Access:</strong> Used only when you explicitly select a pre-saved Soil Health Card image from your gallery for analysis.</li>
+                <li><strong>In-Memory Processing:</strong> Any captured or uploaded image is processed immediately on-the-fly in-memory to extract soil parameters and is <strong>never</strong> permanently stored on our servers.</li>
+            </ul>
+
+            <h2>2. Data Collection and Storage</h2>
+            <p><strong>We do not collect, store, or sell any personal data.</strong></p>
+            <ul>
+                <li>No personal identification details (like name, email, or phone number) are required to use the App.</li>
+                <li>No usage tracking or analytics libraries are integrated to build advertising profiles.</li>
+            </ul>
+
+            <h2>3. Third-Party Services</h2>
+            <p>The App securely communicates with the <strong>Google Cloud Vision API</strong> to perform optical character recognition (OCR) on your Soil Health Cards. This processing is performed over an encrypted HTTPS connection, and your image data is used solely to extract the text values of your soil parameters.</p>
+
+            <h2>4. Data Security</h2>
+            <p>All communication between the mobile app and our servers is secured using industry-standard HTTPS encryption. We implement robust security measures to protect your temporary in-transit data from unauthorized access or disclosure.</p>
+
+            <h2>5. Contact Us</h2>
+            <p>If you have any questions or feedback regarding this Privacy Policy, please contact our team at the University of Agricultural Sciences, GKVK, Bengaluru.</p>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 GKVK - University of Agricultural Sciences, Bengaluru. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content, status_code=200)
 
 
 if __name__ == "__main__":
