@@ -122,6 +122,8 @@ async def analyze_image_direct(file: UploadFile = File(...)):
         )
 
     try:
+        # Reset file cursor to beginning to ensure it's not already read/consumed
+        await file.seek(0)
         # Read image into memory
         image_bytes = await file.read()
         log(f"Read {len(image_bytes)} bytes for direct analysis")
@@ -165,6 +167,9 @@ async def analyze_image_direct(file: UploadFile = File(...)):
             message="Analysis completed",
             message_kn="ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
         )
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 400 Bad Request) to return correct HTTP status codes
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
