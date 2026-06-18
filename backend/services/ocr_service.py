@@ -148,6 +148,52 @@ class OCRService:
 
         return full_text
 
+    def _detect_text_rotation(self, response: Any) -> int:
+        """Detect dominant text rotation from Google Cloud Vision response in degrees.
+        
+        Returns 0, 90, 180, or 270.
+        """
+        angles = []
+        try:
+            pages = response.full_text_annotation.pages
+            if not pages:
+                return 0
+        except Exception:
+            return 0
+
+        for page in pages:
+            for block in page.blocks:
+                for paragraph in block.paragraphs:
+                    for word in paragraph.words:
+                        vertices = word.bounding_box.vertices
+                        if len(vertices) >= 2:
+                            v0 = vertices[0]
+                            v1 = vertices[1]
+                            dx = (v1.x or 0) - (v0.x or 0)
+                            dy = (v1.y or 0) - (v0.y or 0)
+                            if dx != 0 or dy != 0:
+                                angle = np.degrees(np.arctan2(dy, dx))
+                                angle = (angle + 360) % 360
+                                angles.append(angle)
+                                
+        if not angles:
+            return 0
+            
+        bins = {0: 0, 90: 0, 180: 0, 270: 0}
+        for angle in angles:
+            if angle >= 315 or angle < 45:
+                bins[0] += 1
+            elif angle >= 45 and angle < 135:
+                bins[90] += 1
+            elif angle >= 135 and angle < 225:
+                bins[180] += 1
+            elif angle >= 225 and angle < 315:
+                bins[270] += 1
+                
+        dominant_rotation = max(bins, key=bins.get)
+        print(f"[OCR] Bounding box angles check: {bins}, dominant = {dominant_rotation}", flush=True)
+        return dominant_rotation
+
     def extract_text_structured(
         self, image_input: Union[str, bytes, np.ndarray]
     ) -> OCRStructuredResult:
@@ -165,13 +211,44 @@ class OCRService:
             logger.exception("OCR preprocessing failed.")
             raise RuntimeError(f"OCR preprocessing failed: {e}") from e
 
+        # First pass check: Run OCR on the original image (first candidate)
+        # to detect if the text is rotated.
+        cached_first_response = None
+        try:
+            first_variant_name, first_candidate_bytes = candidates[0]
+            print(f"Running orientation check pass on variant: {first_variant_name}", flush=True)
+            response = self._run_document_text_detection(first_candidate_bytes)
+            rotation = self._detect_text_rotation(response)
+            
+            if rotation != 0:
+                print(f"Image text detected as rotated by {rotation} degrees. Performing auto-rotation...", flush=True)
+                # Rotate base image
+                if rotation == 90:
+                    base_img = cv2.rotate(base_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                elif rotation == 180:
+                    base_img = cv2.rotate(base_img, cv2.ROTATE_180)
+                elif rotation == 270:
+                    base_img = cv2.rotate(base_img, cv2.ROTATE_90_CLOCKWISE)
+                
+                # Re-build preprocessed variants from the rotated upright image!
+                candidates = self._build_preprocess_variants(base_img)[: self.max_ocr_passes]
+                print("Re-built preprocessed candidates with oriented image.", flush=True)
+            else:
+                # Cache the response for the first candidate since we already ran it and it is upright
+                cached_first_response = response
+        except Exception as e:
+            logger.warning(f"Orientation check pass failed or was skipped: {e}")
+
         best_structured: Optional[OCRStructuredResult] = None
         best_score = -1.0
         last_api_error: Optional[Exception] = None
 
-        for variant_name, candidate_bytes in candidates:
+        for idx, (variant_name, candidate_bytes) in enumerate(candidates):
             try:
-                response = self._run_document_text_detection(candidate_bytes)
+                if idx == 0 and cached_first_response is not None:
+                    response = cached_first_response
+                else:
+                    response = self._run_document_text_detection(candidate_bytes)
                 structured = self._parse_response(response)
                 score = self._score_structured_result(structured)
                 logger.info("OCR variant '%s' score=%.2f", variant_name, score)
@@ -390,12 +467,14 @@ class OCRService:
                             y_center = (vertices[0][1] + vertices[2][1]) / 2.0
                             x_center = (vertices[0][0] + vertices[2][0]) / 2.0
                             width = vertices[1][0] - vertices[0][0]
+                            height = vertices[2][1] - vertices[0][1]
                             text_items.append(
                                 {
                                     "text": word_text,
                                     "y": y_center,
                                     "x": x_center,
                                     "width": width,
+                                    "height": height,
                                 }
                             )
 
@@ -423,28 +502,41 @@ class OCRService:
 
             pages.append(ocr_page)
 
-        # Legacy-style row grouping: sort by y-bucket then x, cluster nearby y
+        # Row grouping: sort by y, cluster nearby y, then sort each group by x
         rows: List[str] = []
         if text_items:
-            text_items.sort(key=lambda t: (int(t["y"] / 25), t["x"]))
-
-            current_row: List[Dict[str, Any]] = []
-            current_y = -100.0
-
+            # Sort all items by y coordinate
+            text_items.sort(key=lambda t: t["y"])
+            
+            # Determine threshold dynamically based on typical word height
+            word_heights = [t["height"] for t in text_items if t.get("height", 0) > 0]
+            median_height = np.median(word_heights) if word_heights else 20.0
+            # 65% of median word height is a very robust line threshold
+            threshold = max(12.0, median_height * 0.65)
+            print(f"[OCR] Word height stats - median: {median_height}, dynamic threshold: {threshold}", flush=True)
+            
+            clustered_rows = []
+            current_cluster = []
+            
             for item in text_items:
-                if abs(item["y"] - current_y) > 20:
-                    if current_row:
-                        current_row.sort(key=lambda t: t["x"])
-                        row_text = " | ".join([t["text"] for t in current_row])
-                        rows.append(row_text)
-                    current_row = [item]
-                    current_y = item["y"]
+                if not current_cluster:
+                    current_cluster.append(item)
                 else:
-                    current_row.append(item)
-
-            if current_row:
-                current_row.sort(key=lambda t: t["x"])
-                row_text = " | ".join([t["text"] for t in current_row])
+                    avg_y = sum(t["y"] for t in current_cluster) / len(current_cluster)
+                    if abs(item["y"] - avg_y) <= threshold:
+                        current_cluster.append(item)
+                    else:
+                        clustered_rows.append(current_cluster)
+                        current_cluster = [item]
+            if current_cluster:
+                clustered_rows.append(current_cluster)
+                
+            # Sort the clustered rows themselves by average y
+            clustered_rows.sort(key=lambda r: sum(t["y"] for t in r) / len(r))
+            
+            for r in clustered_rows:
+                r.sort(key=lambda t: t["x"])
+                row_text = " | ".join([t["text"] for t in r])
                 rows.append(row_text)
 
         return OCRStructuredResult(

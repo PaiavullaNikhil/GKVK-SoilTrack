@@ -40,6 +40,18 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://lri-fetilizer-be-732318741320.asia-south1.run.app"
       }
+    },
+    "production-apk": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://lri-fetilizer-be-732318741320.asia-south1.run.app"
+      }
     }
   },
   "submit": {

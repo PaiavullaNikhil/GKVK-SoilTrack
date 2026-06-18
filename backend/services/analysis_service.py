@@ -40,7 +40,7 @@ class AnalysisService:
         "ಕ್ಷಾರೀಯ": ("#F59E0B", "Alkaline"),
         # Fertility / nutrient levels (5-class scale)
         "ಅತಿ ಕಡಿಮೆ": ("#B91C1C", "Very Low"),
-        "ಕಡಿಮೆ": ("#EF4444", "Low"),
+        "ಕಡಿಮೆ": ("#F97316", "Low"),
         "ಮಧ್ಯಮ": ("#F59E0B", "Medium"),
         "ಹೆಚ್ಚು": ("#10B981", "High"),
         "ಅತಿ ಹೆಚ್ಚು": ("#16A34A", "Very High"),
@@ -63,7 +63,7 @@ class AnalysisService:
         r"\bnormal\b": ("ಸಾಮಾನ್ಯ", "#10B981"),
         r"\bsaline\b": ("ಲವಣಯುಕ್ತ", "#EF4444"),
         r"\bvery\s+low\b": ("ಅತಿ ಕಡಿಮೆ", "#B91C1C"),
-        r"\blow\b": ("ಕಡಿಮೆ", "#EF4444"),
+        r"\blow\b": ("ಕಡಿಮೆ", "#F97316"),
         r"\bmedium\b": ("ಮಧ್ಯಮ", "#F59E0B"),
         r"\bvery\s+high\b": ("ಅತಿ ಹೆಚ್ಚು", "#16A34A"),
         r"\bhigh\b": ("ಹೆಚ್ಚು", "#10B981"),
@@ -120,6 +120,20 @@ class AnalysisService:
                     return param
         return None
 
+    def _find_param_with_end(self, text: str) -> Tuple[str, int]:
+        """Find which parameter this text refers to and the end position of the match."""
+        best_param = None
+        best_end = -1
+        
+        for param, patterns in self.PARAM_PATTERNS.items():
+            for pattern in patterns:
+                m = re.search(pattern, text, re.IGNORECASE)
+                if m and m.end() > best_end:
+                    best_end = m.end()
+                    best_param = param
+                    
+        return best_param, best_end
+
     def _find_status(self, text: str) -> Tuple[str, str, str]:
         """Find status keyword in text and return (status_kn, color, status_en)."""
         # 1. Try to find Kannada status keyword first
@@ -138,6 +152,16 @@ class AnalysisService:
 
     def _extract_value(self, text: str) -> str:
         """Extract numeric value from text."""
+        if not text:
+            return None
+            
+        # Remove any spaces and pipes around comparison operators (< or >)
+        # e.g., "< | 0.6" -> "<0.6", ">  4.5" -> ">4.5"
+        text_cleaned = re.sub(r'([><])\s*\|?\s*(\d)', r'\1\2', text)
+        
+        # Remove any spaces and pipes inside ranges (e.g., "5.5 | - | 6.0" -> "5.5-6.0")
+        text_cleaned = re.sub(r'(\d+\.?\d*)\s*\|?\s*[-–]\s*\|?\s*(\d)', r'\1-\2', text_cleaned)
+        
         # Look for patterns like: 5.0-5.5, >0.6, <2, 140-280, etc.
         patterns = [
             r'(\d+\.?\d*\s*[-–]\s*\d+\.?\d*)',  # Range: 5.0-5.5
@@ -146,15 +170,16 @@ class AnalysisService:
             r'(\d+)',                            # Integer: 140
         ]
         for pattern in patterns:
-            m = re.search(pattern, text)
+            m = re.search(pattern, text_cleaned)
             if m:
                 return m.group(1).replace(' ', '')
         return None
 
-    # Colors: RED=#EF4444, YELLOW=#F59E0B, GREEN=#10B981
+    # Colors: RED=#EF4444, YELLOW=#F59E0B, GREEN=#10B981, ORANGE=#F97316
     RED = "#EF4444"
     YELLOW = "#F59E0B"
     GREEN = "#10B981"
+    ORANGE = "#F97316"
     GRAY = "#6B7280"
 
     def _get_status_from_value(self, param: str, value: float) -> Tuple[str, str, str]:
@@ -187,7 +212,7 @@ class AnalysisService:
         # Organic Carbon
         if param == "organic_carbon":
             if value < 0.50:
-                return ("ಕಡಿಮೆ", self.RED, "Low")
+                return ("ಕಡಿಮೆ", self.ORANGE, "Low")
             elif value <= 0.75:
                 return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
             else:
@@ -198,14 +223,14 @@ class AnalysisService:
             # Per current soil-card interpretation requested by user:
             # 140-280 should map to "ಕಡಿಮೆ".
             if value <= 280:
-                return ("ಕಡಿಮೆ", self.RED, "Low")
+                return ("ಕಡಿಮೆ", self.ORANGE, "Low")
             else:
                 return ("ಹೆಚ್ಚು", self.GREEN, "High")
         
         # Phosphorus
         if param == "phosphorus":
             if value < 23:
-                return ("ಕಡಿಮೆ", self.RED, "Low")
+                return ("ಕಡಿಮೆ", self.ORANGE, "Low")
             elif value <= 57:
                 return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
             else:
@@ -214,7 +239,7 @@ class AnalysisService:
         # Potassium
         if param == "potassium":
             if value < 145:
-                return ("ಕಡಿಮೆ", self.RED, "Low")
+                return ("ಕಡಿಮೆ", self.ORANGE, "Low")
             elif value <= 337:
                 return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
             else:
@@ -223,7 +248,7 @@ class AnalysisService:
         # Sulphur
         if param == "sulphur":
             if value < 10:
-                return ("ಕಡಿಮೆ", self.RED, "Low")
+                return ("ಕಡಿಮೆ", self.ORANGE, "Low")
             elif value <= 20:
                 return ("ಮಧ್ಯಮ", self.YELLOW, "Medium")
             else:
@@ -284,16 +309,19 @@ class AnalysisService:
         found = {}
         
         for row in rows:
-            # Find which parameter this row is about
-            param = self._find_param(row)
+            # Find which parameter this row is about and where it ends
+            param, end_idx = self._find_param_with_end(row)
             if not param:
                 continue
             
             if param in found:
                 continue
             
+            # Slice row to only extract values after the parameter name
+            row_val_part = row[end_idx:]
+            
             # Extract value
-            value = self._extract_value(row)
+            value = self._extract_value(row_val_part)
             
             # Try to extract Kannada status
             status_kn, color, status_en = self._find_status(row)
