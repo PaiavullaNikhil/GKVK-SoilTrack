@@ -111,20 +111,6 @@ export default function UploadScreen() {
   const pickImage = async () => {
     console.log("[UploadScreen] pickImage called - opening gallery picker");
     try {
-      // Ensure we have permission to read photos / media
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log("[UploadScreen] Media library permission status:", status);
-
-      if (status !== "granted") {
-        Alert.alert(
-          "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ / Permission Required",
-          "ಗ್ಯಾಲರಿ ಬಳಕೆಗಾಗಿ ಫೋಟೋಗಳಿಗೆ ಪ್ರವೇಶ ಅನುಮತಿಸಿ\nAllow access to photos to use gallery",
-          [{ text: "ಸರಿ / OK" }]
-        );
-        console.log("[UploadScreen] Media library permission denied");
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
@@ -389,7 +375,7 @@ export default function UploadScreen() {
 
   const getStatusOptions = (nutrientName: string) => {
     const name = nutrientName.toLowerCase();
-    if (name.includes("ph") || name.includes("ರಸಸಾರ")) {
+    if (name === "ph" || name.includes("ರಸಸಾರ")) {
       return [
         { kn: "ಆಮ್ಲೀಯ", en: "Acidic", color: "#F97316" },
         { kn: "ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", en: "Slightly Acidic", color: "#F59E0B" },

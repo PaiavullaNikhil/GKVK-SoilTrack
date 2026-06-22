@@ -32,7 +32,7 @@ export default function LandingScreen() {
 
           {/* Title Section */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>LRI Fertilizer Advisor</Text>
+            <Text style={styles.title}>LRI FERTILIZER</Text>
             <View style={styles.subtitleRow}>
               <Text style={styles.subtitle}>Healthy Soil, Happy Farmer!</Text>
             </View>

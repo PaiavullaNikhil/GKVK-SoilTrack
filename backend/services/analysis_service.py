@@ -15,18 +15,18 @@ class AnalysisService:
 
     # Patterns to match parameter names (English and Kannada)
     PARAM_PATTERNS = {
-        "ph": [r"pH", r"\(pH\)", r"ಪಿ\.?ಹೆಚ್", r"ರಸಸಾರ"],
-        "ec": [r"EC", r"E\.?C", r"\(EC\)", r"\(E\.?C\)", r"ಇ\.?ಸಿ", r"ವಿದ್ಯುತ್", r"ವಾಹಕತೆ", r"Electrical", r"Conductivity"],
-        "organic_carbon": [r"OC", r"\(OC\)", r"\(?C\)", r"ಸಾವಯವ", r"ಇಂಗಾಲ", r"Organic", r"Carbon"],
+        "ph": [r"\bpH\b", r"\(pH\)", r"ಪಿ\.?ಹೆಚ್", r"ರಸಸಾರ"],
+        "ec": [r"\bEC\b", r"\bE\.?C\b", r"\(EC\)", r"\(E\.?C\)", r"ಇ\.?ಸಿ", r"ವಿದ್ಯುತ್", r"ವಾಹಕತೆ", r"Electrical", r"Conductivity"],
+        "organic_carbon": [r"\bOC\b", r"\(OC\)", r"\(?C\)", r"ಸಾವಯವ", r"ಇಂಗಾಲ", r"Organic", r"Carbon"],
         "nitrogen": [r"\bN\b", r"\(N\)", r"TN", r"ಸಾರಜನಕ", r"Nitrogen"],
         "phosphorus": [r"P2O5", r"P205", r"P2o5", r"\(P2", r"ರಂಜಕ", r"Phosphorus", r"Phosphate"],
         "potassium": [r"K2O", r"K20", r"\(K2", r"ಪೊಟ್ಯಾಶ್", r"ಪೊಟ್ಯಾಷ್", r"Potassium", r"Potash"],
         "sulphur": [r"\bS\b", r"\(S\)", r"ಗಂಧಕ", r"Sulphur", r"Sulfur"],
-        "zinc": [r"Zn", r"ZR", r"\(Zn\)", r"\(ZR\)", r"ಸತು", r"Zinc"],
+        "zinc": [r"\bZn\b", r"\bZR\b", r"\(Zn\)", r"\(ZR\)", r"ಸತು", r"Zinc"],
         "boron": [r"\bB\b", r"\(B\)", r"ಬೋರಾನ್", r"Boron"],
-        "iron": [r"Fe", r"\(Fe\)", r"ಕಬಿನ", r"ಕಬಿಣ", r"ಕಬ್ದಿಣ", r"ಕಬ್ದಿಣ್", r"ಕಬ್ಬಿಣ", r"Iron"],
-        "manganese": [r"Mn", r"\(Mn\)", r"ಮ್ಯಾಂಗನೀಸ್", r"Manganese"],
-        "copper": [r"Cu", r"\(Cu\)", r"ತಾಮ್ರ", r"Copper"],
+        "iron": [r"\bFe\b", r"\(Fe\)", r"ಕಬಿನ", r"ಕಬಿಣ", r"ಕಬ್ದಿಣ", r"ಕಬ್ದಿಣ್", r"ಕಬ್ದಿಣ್", r"ಕಬ್ರಿನ್", r"ಕಬ್ಬಿಣ", r"Iron"],
+        "manganese": [r"\bMn\b", r"\(Mn\)", r"ಮ್ಯಾಂಗನೀಸ್", r"Manganese"],
+        "copper": [r"\bCu\b", r"\(Cu\)", r"ತಾಮ್ರ", r"Copper"],
     }
 
     # Status keywords in Kannada and their colors
@@ -154,6 +154,9 @@ class AnalysisService:
         """Extract numeric value from text."""
         if not text:
             return None
+            
+        # Remove any dilution ratios (e.g., "1:2.5", "(1:5)")
+        text = re.sub(r'\(?\d+\s*:\s*\d+\.?\d*\)?', '', text)
             
         # Remove any spaces and pipes around comparison operators (< or >)
         # e.g., "< | 0.6" -> "<0.6", ">  4.5" -> ">4.5"

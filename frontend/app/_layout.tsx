@@ -105,7 +105,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="home"
           options={{
-            headerTitle: "LRI Fertilizer Advisor",
+            headerTitle: "LRI FERTILIZER",
             headerTitleAlign: "center",
           }}
         />
