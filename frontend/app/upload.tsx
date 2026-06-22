@@ -22,6 +22,7 @@ export default function UploadScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<number>(0);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [imageId, setImageId] = useState<string | null>(null);
   const [npkStatus, setNpkStatus] = useState<{
@@ -42,7 +43,7 @@ export default function UploadScreen() {
     console.log("[UploadScreen] Mounted");
     loadHistoryData();
     speakKn(
-      "ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ ಕಾರ್ಡಿನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ."
+      "ಭೂ ಸಂಪನ್ಮೂಲ ಸಮೀಕ್ಷೆ ಕಾರ್ಡಿನ ಫೋಟೋ ತೆಗೆದು ಅಥವಾ ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ನಂತರ ವಿಶ್ಲೇಷಣೆ ಬಟನ್ ಒತ್ತಿ. ಒಂದು ವೇಳೆ ನೀವು ಈಗಾಗಲೇ ವರದಿಯನ್ನು ಪಡೆದಿದ್ದರೆ, ಹಳೆಯ ವರದಿ ಬಟನ್ ಮೂಲಕ ಅದನ್ನು ಆಯ್ಕೆ ಮಾಡಬಹುದು."
     );
     return () => {
       console.log("[UploadScreen] Unmounted");
@@ -67,8 +68,24 @@ export default function UploadScreen() {
   };
 
   const deleteHistoryItem = async (id: string) => {
-    const updated = await deleteFromHistory(id);
-    setHistory(updated);
+    Alert.alert(
+      "ಸ್ಥಿರೀಕರಿಸಿ / Confirm Delete",
+      "ಈ ವರದಿಯನ್ನು ಇತಿಹಾಸದಿಂದ ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?\nAre you sure you want to delete this report from history?",
+      [
+        {
+          text: "ರದ್ದು / Cancel",
+          style: "cancel"
+        },
+        {
+          text: "ಅಳಿಸಿ / Delete",
+          style: "destructive",
+          onPress: async () => {
+            const updated = await deleteFromHistory(id);
+            setHistory(updated);
+          }
+        }
+      ]
+    );
   };
 
   const selectFromHistory = (item: any) => {
@@ -94,20 +111,6 @@ export default function UploadScreen() {
   const pickImage = async () => {
     console.log("[UploadScreen] pickImage called - opening gallery picker");
     try {
-      // Ensure we have permission to read photos / media
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log("[UploadScreen] Media library permission status:", status);
-
-      if (status !== "granted") {
-        Alert.alert(
-          "ಅನುಮತಿ ಅಗತ್ಯವಿದೆ / Permission Required",
-          "ಗ್ಯಾಲರಿ ಬಳಕೆಗಾಗಿ ಫೋಟೋಗಳಿಗೆ ಪ್ರವೇಶ ಅನುಮತಿಸಿ\nAllow access to photos to use gallery",
-          [{ text: "ಸರಿ / OK" }]
-        );
-        console.log("[UploadScreen] Media library permission denied");
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
@@ -195,6 +198,10 @@ export default function UploadScreen() {
     console.log("[UploadScreen] Starting upload/analysis", { uri: selectedImage });
     setIsUploading(true);
     setIsAnalyzing(true);
+    setLoadingStage(1);
+
+    const timer1 = setTimeout(() => setLoadingStage(2), 1800);
+    const timer2 = setTimeout(() => setLoadingStage(3), 3800);
     try {
       // Direct analysis - no file storage needed (works with Hugging Face Spaces)
       const analysis = await analyzeImageDirect(selectedImage);
@@ -305,8 +312,11 @@ export default function UploadScreen() {
       // Non-blocking: just speak a brief Kannada message instead of showing an alert
       speakKn("ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.");
     } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       setIsUploading(false);
       setIsAnalyzing(false);
+      setLoadingStage(0);
     }
   };
 
@@ -365,7 +375,7 @@ export default function UploadScreen() {
 
   const getStatusOptions = (nutrientName: string) => {
     const name = nutrientName.toLowerCase();
-    if (name.includes("ph") || name.includes("ರಸಸಾರ")) {
+    if (name === "ph" || name.includes("ರಸಸಾರ")) {
       return [
         { kn: "ಆಮ್ಲೀಯ", en: "Acidic", color: "#F97316" },
         { kn: "ಸ್ವಲ್ಪ ಆಮ್ಲೀಯ", en: "Slightly Acidic", color: "#F59E0B" },
@@ -499,10 +509,22 @@ export default function UploadScreen() {
                 <ActivityIndicator color="#fff" style={{ marginRight: 10 }} />
                 <View>
                   <Text style={styles.uploadButtonText}>
-                    {isUploading ? "ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ..." : "ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ..."}
+                    {loadingStage === 1
+                      ? "ಚಿತ್ರ ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ..."
+                      : loadingStage === 2
+                      ? "ಪಠ್ಯವನ್ನು ಹೊರತೆಗೆಯಲಾಗುತ್ತಿದೆ..."
+                      : loadingStage === 3
+                      ? "ವರದಿಯನ್ನು ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ..."
+                      : "ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ..."}
                   </Text>
                   <Text style={styles.uploadButtonTextEn}>
-                    {isUploading ? "Uploading..." : "Analyzing..."}
+                    {loadingStage === 1
+                      ? "Uploading image..."
+                      : loadingStage === 2
+                      ? "Extracting text..."
+                      : loadingStage === 3
+                      ? "Mapping values..."
+                      : "Analyzing..."}
                   </Text>
                 </View>
               </>

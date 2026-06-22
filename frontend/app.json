@@ -44,12 +44,7 @@
           "recordAudioPermission": "Allow LRI FERTILIZER App to access your microphone for recording during card capture."
         }
       ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow LRI FERTILIZER App to access your photos to select LRI card images."
-        }
-      ],
+      "expo-image-picker",
       "expo-asset",
       "expo-font"
     ],

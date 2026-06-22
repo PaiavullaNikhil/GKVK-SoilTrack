@@ -1,10 +1,11 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { AppState, AppStateStatus, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 import { subscribeToConnection } from "../services/api";
+import { stopVoice, initializeVoiceSettings } from "../utils/voice";
 
 // Custom header title component with Kannada and English
 function HeaderTitle({ kannada, english }: { kannada: string; english: string }) {
@@ -58,6 +59,24 @@ const headerStyles = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Load voice settings on launch
+    initializeVoiceSettings();
+
+    // Listen to app state changes
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === "background" || nextAppState === "inactive") {
+        console.log("[AppState] App in background/inactive, stopping voice.");
+        stopVoice();
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
@@ -86,7 +105,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="home"
           options={{
-            headerTitle: "LRI Fertilizer Advisor",
+            headerTitle: "LRI FERTILIZER",
             headerTitleAlign: "center",
           }}
         />

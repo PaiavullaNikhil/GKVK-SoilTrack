@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { checkHealth } from "../services/api";
-import { getVoiceEnabled, setVoiceEnabled, speakKn, stopVoice } from "../utils/voice";
+import { getVoiceEnabled, initializeVoiceSettings, setVoiceEnabled, speakKn, stopVoice } from "../utils/voice";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,6 +21,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     refreshConnection();
+    initializeVoiceSettings().then((enabled) => {
+      setVoiceEnabledState(enabled);
+    });
   }, []);
 
   const refreshConnection = async () => {
